@@ -33,3 +33,12 @@
 6. Assign and complete training, refresh the browser, and confirm state persists.
 7. Enter cost assumptions, confirm updated output, and export JSON/CSV records.
 8. On a roughly 390px mobile viewport, check the side drawer, form layout, responsive cards and horizontally scrollable tables.
+
+## Product design refinement — 2026-10-27
+
+- Replaced promotional hero and four equal KPI cards with a shift brief, a state-derived next action, an order handoff queue, a per-ingredient replenishment view, a routine shortcut, and small secondary indicators. This is presentation-only: values remain derived from `getStats`, orders, checklists, inventory and movement records.
+- Added a five-item mobile quick-navigation dock (Overview, Orders, Stock, Checklists, More) with a full drawer for Training and Insights, and labelled mobile record views for Inventory and Training; desktop sidebar remains.
+- CSS keeps Com warm snow/coffee/blue direction. The reference Gilroy font files and usage license were not supplied; the existing safe fallback stack remains in use.
+- **PASSED locally:** `npm run check` (TypeScript + 7 existing domain tests); 57 Chromium UI assertions at 390×844 and 1440×900 including navigation, modals, extra order items, page structure, touch-target geometry, and horizontal overflow across all six pages. Chromium screenshots were captured before and after.
+- **ENVIRONMENT LIMITATION:** Chromium rejected actual `http://127.0.0.1` navigation with `ERR_BLOCKED_BY_ADMINISTRATOR`. UI assertions and screenshots instead used real headless Chromium with the compiled application bundled into an in-document preview via `page.set_content`. This verifies DOM interactions and responsive rendering, but is **not** a full deployed-site navigation or real browser-storage persistence test.
+- Not modified: domain logic, sample data, data version, browser storage keys, forms and core workflows.
