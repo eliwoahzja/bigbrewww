@@ -90,7 +90,7 @@ export function appView(db:Database,ui:UIState,sync:SyncView={"kind":"local","de
  <div class="shell" ${ui.modal?'inert':''}>
  <aside class="sidebar" id="app-sidebar" aria-label="Workspace navigation">
    <div class="sidebar-brand-row">
-     <div class="brand"><img class="brand-emblem" src="/assets/bigbrew-mark.png" alt="" width="56" height="38" decoding="async"><div class="brand-name">BRANCHWORK<small>BigBrew operations</small></div></div>
+     <div class="brand"><img class="brand-emblem" src="/assets/bigbrew-mark.png" alt="" width="56" height="38" decoding="async"><div class="brand-name">BIGBREW<small>Operations</small></div></div>
      <button type="button" class="icon-btn sidebar-close" data-action="mobile-toggle" aria-label="Close navigation">${icon('close',20)}</button>
    </div>
    <nav class="nav-stack" aria-label="Primary">${navItems.map(([p,title,i])=>`<button type="button" data-action="nav" data-page="${p}" class="nav-link ${ui.page===p?'is-selected':''}" ${ui.page===p?'aria-current="page"':''}>${icon(i,19)}<span>${esc(title)}</span></button>`).join('')}</nav>
@@ -103,8 +103,8 @@ export function appView(db:Database,ui:UIState,sync:SyncView={"kind":"local","de
    <header class="topbar">
      <div class="topbar-main">
        <div class="topbar-context">
-         <button type="button" class="icon-btn menu-btn" data-action="mobile-toggle" aria-label="Open navigation" aria-expanded="${ui.mobileOpen}" aria-controls="app-sidebar">${icon('menu',21)}</button>
-         <span class="mobile-wordmark">BRANCHWORK</span>
+         
+         <span class="mobile-wordmark">BIGBREW <small>Operations</small></span>
          <span class="crumb-root">Workspace</span><span class="crumb-sep" aria-hidden="true">/</span><span class="crumb-current">${esc(current)}</span>
        </div>
        ${operator(db,ui)}
@@ -113,12 +113,12 @@ export function appView(db:Database,ui:UIState,sync:SyncView={"kind":"local","de
    <main class="page" id="main-content" tabindex="-1">
      ${db.mode==='sample'?`<div class="notice notice-sample"><span class="notice-mark" aria-hidden="true">${icon('alert',18)}</span><p><strong>Sample workspace.</strong> Every record is illustrative, not a measured BigBrew result.</p>${button('Clear sample data','confirm-blank','btn btn-secondary btn-sm')}</div>`:live?`<div class="notice notice-live" data-sync="${esc(sync.kind)}"><span class="notice-mark" aria-hidden="true">${icon('shield',17)}</span><p><strong>${esc(sync.kind==='saving'?'Saving…':sync.kind==='error'?'Not saved':'Live branch workspace.')}</strong> <span data-sync-detail>${esc(sync.detail)}</span></p>${button('Load sample data','confirm-sample','btn btn-quiet btn-sm')}</div>`:`<div class="notice notice-local"><span class="notice-mark" aria-hidden="true">${icon('alert',17)}</span><p><strong>Offline workspace.</strong> ${esc(sync.detail)}. Configure the branch database to share records across devices.</p>${button('Load sample data','confirm-sample','btn btn-quiet btn-sm')}</div>`}
      ${ui.page==='overview'?overview(db,ui):ui.page==='inventory'?inventory(db,ui):ui.page==='orders'?orders(db,ui):ui.page==='checklists'?checklists(db,ui):ui.page==='team'?team(db):insights(db)}
-     <footer class="page-footer"><span>Branchwork · BigBrew operations workspace</span><span>${live?'Records are stored in the branch database':'Records stay in this browser'}</span></footer>
+     <footer class="page-footer"><span>BigBrew Operations · Shift workspace</span><span>${live?'Records are stored in the branch database':'Records stay in this browser'}</span></footer>
    </main>
  </div>
  <nav class="mobile-dock" aria-label="Quick navigation">
    ${(['overview','orders','inventory','checklists'] as Page[]).map(p=>{const item=navItems.find(([id])=>id===p)!;const short=p==='inventory'?'Stock':p==='checklists'?'Routines':item[1];return `<button type="button" data-action="nav" data-page="${p}" class="dock-link ${ui.page===p?'is-active':''}" ${ui.page===p?'aria-current="page"':''} aria-label="${esc(item[1])}">${icon(item[2],20)}<span>${esc(short)}</span></button>`;}).join('')}
-   <button type="button" data-action="mobile-toggle" aria-label="Open all navigation" aria-expanded="${ui.mobileOpen}" aria-controls="app-sidebar" class="dock-link ${ui.page==='team'||ui.page==='insights'?'is-active':''}">${icon('menu',20)}<span>More</span></button>
+   <button type="button" data-action="mobile-toggle" aria-label="Open all navigation" aria-expanded="${ui.mobileOpen}" aria-controls="app-sidebar" class="dock-link ${ui.page==='team'||ui.page==='insights'?'is-active':''}">${icon('dots',20)}<span>More</span></button>
  </nav>
  </div>
  ${ui.modal?renderModal(db,ui):''}`;
@@ -134,7 +134,7 @@ export function gateView(message:string,sync:SyncView){
  <main class="gate">
    <form class="gate-card" id="gate-form" data-form="unlock">
      <img class="gate-mark" src="/assets/bigbrew-mark.png" alt="BigBrew" width="84" height="57">
-     <p class="section-kicker">Branchwork · BigBrew operations</p>
+     <p class="section-kicker">BigBrew Operations</p>
      <h1>Unlock the branch workspace</h1>
      <p class="gate-lede">This workspace is stored in the shared branch database. Enter the branch access key to load live records.</p>
      ${message?`<p class="form-error" role="alert">${esc(message)}</p>`:''}

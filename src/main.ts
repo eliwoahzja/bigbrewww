@@ -61,7 +61,7 @@ function render(resetScroll=false){
  const y=window.scrollY;
  if(locked){
   app!.innerHTML=gateView(lockMessage,{kind:syncInfo().kind,detail:syncInfo().detail});
-  document.title='Unlock · Branchwork';
+  document.title='Unlock · BigBrew Operations';
   document.body.classList.remove('modal-active','drawer-active');
   requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('#gate-form input[name="key"]')?.focus({preventScroll:true}));
   return;
@@ -69,7 +69,7 @@ function render(resetScroll=false){
  app!.innerHTML=appView(db,ui,{kind:syncInfo().kind,detail:syncInfo().detail});
  document.body.classList.toggle('modal-active',!!ui.modal);
  document.body.classList.toggle('drawer-active',ui.mobileOpen&&drawerQuery.matches);
- document.title=`${pageNames[ui.page]} · Branchwork`;
+ document.title=`${pageNames[ui.page]} · BigBrew Operations`;
  applyDrawerState();
  applySyncStatus();
  if(resetScroll)window.scrollTo({top:0,behavior:'instant'});
@@ -121,7 +121,7 @@ function applyDrawerState(focusInside=false){
 function setDrawer(open:boolean,focusInside=false){
  ui.mobileOpen=open&&drawerQuery.matches;
  applyDrawerState(focusInside);
- if(!ui.mobileOpen)document.querySelector<HTMLElement>('.menu-btn')?.focus({preventScroll:true});
+ if(!ui.mobileOpen)document.querySelector<HTMLElement>('.dock-link[data-action="mobile-toggle"]')?.focus({preventScroll:true});
 }
 function open(kind:string,id=''){
  if(!ui.modal)modalReturnFocus=captureFocus();

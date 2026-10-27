@@ -1758,3 +1758,8 @@ body.modal-active, body.drawer-active { overflow: hidden; }
   .gate-card { padding: 24px 20px 22px; }
   .gate-card h1 { font-size: 24px; }
 }
+
+/* Mobile uses the bottom More control as its only drawer trigger. */
+@media (max-width:1080px) {
+  .mobile-wordmark small { font-size: .76em; font-weight: 600; letter-spacing: .035em; color: var(--muted); }
+}

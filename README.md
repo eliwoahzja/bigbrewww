@@ -143,3 +143,11 @@ The [AJONAI Anti-Slop skill](https://github.com/ItsRealAJ/Anti-Slop-Frontend-Ski
 To publish the shared branch workspace, add `DATABASE_URL` and `BRANCHWORK_ACCESS_KEY` in Vercel → Settings → Environment Variables, run `npm run db:migrate` once against that database, and redeploy. Without them the deployment still works and reports the labelled offline workspace.
 
 After editing TypeScript or CSS, run `npm run build` once — it regenerates `public/` from `index.html`, `src/styles.css`, `assets/`, and the compiled modules, and fails if any referenced asset is missing. Do not copy files into `public/` manually.
+
+## Supabase deployment (BigBrew)
+
+The BigBrew live workspace uses the isolated RLS-protected `public.bigbrew_workspace` table and a private access-key digest in `bigbrew_private.access_config`. It does not touch unrelated tables. `db/supabase.sql` contains the database setup; the shared key and its hash must never be committed.
+
+Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `BRANCHWORK_ACCESS_KEY` on the Vercel server, optionally `BRANCHWORK_WORKSPACE_ID` (default `main`). The backend calls Supabase PostgREST with the publishable key and the shared key header, and PostgreSQL RLS checks the shared key against its privately stored digest. The browser only calls the application's `/api/state` endpoint. Supabase's service-role or secret key is not required.
+
+The original Neon backend is retained for existing local deployments where Supabase is not configured. The legacy `npm run db:migrate` uses a Neon-specific HTTP driver; for Supabase apply `db/supabase.sql` using the Supabase migration workflow instead.

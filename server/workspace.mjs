@@ -6,7 +6,8 @@
  * if the row still has that revision, and a conflict returns the current
  * server copy so the browser can adopt it instead of overwriting someone.
  *
- * `DATABASE_URL` plus `BRANCHWORK_ACCESS_KEY` are both required for live mode.
+ * Supabase URL + publishable key + BRANCHWORK_ACCESS_KEY enable live mode.
+ * A legacy DATABASE_URL Neon backend remains supported as a fallback.
  * Missing either one fails closed: the API reports `not-configured` and the
  * client stays in the clearly labelled offline workspace.
  */
@@ -17,6 +18,8 @@ import { dirname } from 'node:path';
 const WORKSPACE_ID = process.env.BRANCHWORK_WORKSPACE_ID || 'main';
 const CONNECTION_STRING = process.env.DATABASE_URL || '';
 const ACCESS_KEY = process.env.BRANCHWORK_ACCESS_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 // Local-only store used by the test suite and contributors without a database.
 // Vercel never sets this, and it is refused in production.
 const LOCAL_STORE =
@@ -59,7 +62,7 @@ export function isDatabase(value) {
   );
 }
 
-export const liveConfigured = () => Boolean((CONNECTION_STRING || LOCAL_STORE) && ACCESS_KEY);
+export const liveConfigured = () => Boolean((CONNECTION_STRING || (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) || LOCAL_STORE) && ACCESS_KEY);
 
 function keyMatches(provided, expectedKey) {
   if (!expectedKey) return false;
@@ -100,6 +103,53 @@ export function neonRepository(connectionString) {
         where id = ${id} and revision = ${expectedRevision}
         returning revision, data, updated_at`;
       return rows[0] || null;
+    },
+  };
+}
+
+
+/** RLS-restricted Supabase PostgREST storage; no privileged database key. */
+export function supabaseRepository(baseUrl, publishableKey, accessKey) {
+  const endpoint = baseUrl.replace(/\/$/, '') + '/rest/v1/bigbrew_workspace';
+  async function query(suffix, method = 'GET', payload, extras = {}) {
+    const headers = {
+      apikey: publishableKey,
+      'x-bigbrew-key': accessKey,
+      Accept: 'application/json',
+      ...extras,
+    };
+    if (payload !== undefined) headers['Content-Type'] = 'application/json';
+    const response = await fetch(endpoint + suffix, {
+      method,
+      headers,
+      ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
+      cache: 'no-store',
+    });
+    let result;
+    try { result = await response.json(); }
+    catch { result = null; }
+    if (!response.ok && !(method === 'POST' && response.status === 409)) {
+      throw new Error('Supabase workspace error: HTTP ' + response.status);
+    }
+    return { response, result };
+  }
+  const byId = (id) => '?id=eq.' + encodeURIComponent(id) + '&select=revision,data,updated_at';
+  return {
+    async read(id) {
+      const { result } = await query(byId(id) + '&limit=1');
+      return Array.isArray(result) ? result[0] || null : null;
+    },
+    async create(id, data) {
+      const { response, result } = await query('', 'POST', { id, revision: 1, data }, { Prefer: 'return=representation' });
+      if (response.status === 409) return null;
+      return Array.isArray(result) ? result[0] || null : null;
+    },
+    async update(id, expectedRevision, data) {
+      const predicate = byId(id) + '&revision=eq.' + expectedRevision;
+      const { result } = await query(predicate, 'PATCH',
+        { revision: expectedRevision + 1, data, updated_at: new Date().toISOString() },
+        { Prefer: 'return=representation' });
+      return Array.isArray(result) ? result[0] || null : null;
     },
   };
 }
@@ -273,6 +323,10 @@ export function defaultRepository() {
   if (cachedRepository) return cachedRepository;
   if (LOCAL_STORE) {
     cachedRepository = fileRepository(LOCAL_STORE);
+    return cachedRepository;
+  }
+  if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
+    cachedRepository = supabaseRepository(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, ACCESS_KEY);
     return cachedRepository;
   }
   if (!CONNECTION_STRING) return null;
