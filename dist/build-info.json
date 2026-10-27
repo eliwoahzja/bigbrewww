@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "sourceHash": "f47bfbc52b2946fa99766db5240a26dad717a2fc2cfe405e2c51f25a979e9afc",
+  "modules": [
+    "domain.js",
+    "format.js",
+    "main.js",
+    "seed.js",
+    "store.js",
+    "views.js"
+  ]
+}

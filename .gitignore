@@ -1,4 +1,8 @@
 node_modules/
+public/
+artifacts/
+test-results/
+playwright-report/
 *.log
 .DS_Store
 .env

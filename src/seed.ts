@@ -1,5 +1,5 @@
 import type { Database,Ingredient,StockMovement,Employee,Order,Training } from './domain.js';
-import { uid,now } from './domain.js';
+
 const iso=(days:number)=>new Date(Date.now()+days*86400000).toISOString();
 export function emptyDatabase():Database {return {version:1,mode:'local',branchName:'Prototype branch',ingredients:[],movements:[],employees:[],orders:[],checklists:[],trainings:[],costs:{setup:0,training:0,monthlyTool:0,wasteSavings:0,refundSavings:0,addedMargin:0}};}
 export function demoDatabase():Database{
@@ -21,5 +21,3 @@ export function demoDatabase():Database{
  const trainings:Training[]=[{id:'tr-1',employeeId:'st-b',moduleId:'onboarding',status:'completed',assignedAt:iso(-9),completedAt:iso(-7)},{id:'tr-2',employeeId:'st-c',moduleId:'quality',status:'assigned',assignedAt:iso(-2),completedAt:''}];
  return {...emptyDatabase(),mode:'sample',branchName:'Sample branch · Demonstration',ingredients,movements,employees:staff,orders,trainings};
 }
-export const initialDemoTimestamp=now;
-export const newId=uid;

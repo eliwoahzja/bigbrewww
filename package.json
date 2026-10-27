@@ -1,16 +1,20 @@
 {
   "name": "bigbrew-operations-capstone",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.2.0",
   "type": "module",
-  "description": "Independent BigBrew-inspired operational management capstone prototype",
+  "description": "Branchwork: an offline-first café shift operations workspace and BigBrew capstone prototype",
   "scripts": {
     "start": "node server.mjs",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/build.mjs",
+    "pretest": "npm run build",
     "test": "node --test tests/*.test.mjs",
-    "check": "npm run build && npm test"
+    "qa": "node scripts/ui-qa.mjs",
+    "check": "npm test && npm run qa"
   },
   "devDependencies": {
+    "axe-core": "^4.10.2",
+    "playwright": "^1.49.1",
     "typescript": "^5.8.3"
   }
 }

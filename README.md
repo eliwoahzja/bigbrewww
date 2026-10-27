@@ -2,104 +2,99 @@
 
 Independent educational prototype. Not created for, endorsed by, or connected to BigBrew. No official or live store data is included.
 
-This project turns the uploaded *Feasibility Study on Operational Management Improvement for BigBrew* into a working offline operations workspace using the uploaded Com `DESIGN.md` as its visual design reference.
+This project turns the uploaded *Feasibility Study on Operational Management Improvement for BigBrew* into a working offline operations workspace, using the uploaded Com `DESIGN.md` as its visual design reference.
 
 ## Start the app
 
 **Requirements:** Node.js 18 or newer. No web accounts, API keys, external service, or framework installation is required to run the included build.
 
 1. Extract the entire project ZIP.
-2. Open a terminal in the `bigbrew-operations` folder.
-3. Run `npm start` or `node server.mjs`.
-4. Open **http://localhost:4173** in a browser.
+2. Open a terminal in the project folder.
+3. Run `npm start` (or `node server.mjs`).
+4. Open **http://localhost:4173**.
 
-The first visit loads **clearly identified example records**. Select **Start with empty data** to begin using the app with your own local records. Add an employee first, then choose the acting operator in the top bar.
+`dist/` ships with the project, so the first run needs no install and no network. The server refuses to start with a readable message if a required file is missing, and warns when `dist/` no longer matches the sources.
 
-Data persists in that browser's `localStorage`. Clearing browser site data, using a different browser/device, or replacing a sample workspace discards the local records. Export records before doing this.
+The first visit loads **clearly identified example records**. Select **Start with empty data** to begin with your own records. Add an employee first, then choose the acting operator in the top bar.
 
-### Edit the TypeScript source
+Data persists in that browser's `localStorage` under `bigbrew-branchwork-v1`. Clearing site data, using another browser, or replacing a sample workspace discards local records. Export a JSON backup before doing any of those.
 
-The app is built with strongly typed TypeScript and native browser ES modules. The `dist/` folder is precompiled and included, so no installation is required for the first run.
+## Commands
 
-To edit and rebuild from the sources:
+| Command | What it does |
+| --- | --- |
+| `npm start` | Serves the app at `http://localhost:4173` (set `PORT` to change it) |
+| `npm run build` | Compiles TypeScript into `dist/` **and** regenerates the `public/` deployment output |
+| `npm test` | Builds, then runs the domain regression suite (14 tests, Node's built-in runner) |
+| `npm run qa` | Builds nothing; drives the served app in Chromium and reports 27 end-to-end checks |
+| `npm run check` | `npm test` followed by `npm run qa` |
 
-```bash
-npm install
-npm run build
-npm test
-npm start
-```
-
-The prototype intentionally uses **no React/Vite runtime**. A native TypeScript module structure allows this prebuilt capstone to run without downloading framework dependencies or configuring a backend. The choice differs from the fallback stack suggested in the brief, but preserves its requirements for modularity, accessible HTML, responsive design, and no hidden services.
+`npm run qa` needs a Chromium build for Playwright: run `npx playwright install chromium` once, and install the shared libraries (`npx playwright install-deps chromium`, or the equivalent for your distribution). On minimal containers, a missing fontconfig or NSS library makes Chromium abort before any page loads; the suite reports that as a bootstrap failure rather than a product failure.
 
 ## Implemented sections
 
 | Page | Working functionality |
 | --- | --- |
-| Overview | Calculated operational snapshot, replenishment list, open orders, recent activity |
-| Inventory | Add/edit/archive ingredients, search/filter, thresholds, receive/consume/waste, physical counts, per-item history |
-| Orders | Multi-line drink orders, channel, preparation status, two-person verification, recorded issues, correction/reverification, cancellations |
-| Checklists | Standard opening, closing, stock-count, and order-quality templates; progress and sign-off logs |
-| People & training | Add/edit employee profiles, activate/deactivate, assign foundational/operations/quality modules, record completion |
-| Insights | Record-driven order issue rate, first-check pass rate, count discrepancy rate, waste cost, category breakdown, what-if payback scenario, CSV/JSON exports |
+| Overview (Shift desk) | Derived shift brief, one recommended next action, order handoff queue, replenishment watch, open routines, activity ledger, small record strip |
+| Inventory | Add/edit/archive ingredients, search and below-threshold filter, receive/consume/waste, physical counts, per-item movement history |
+| Orders | Multi-line orders, channel, preparation, two-person verification, recorded issues, correction and re-verification, cancellation with a reason |
+| Checklists | Opening, closing, stock-count, and order-quality templates with per-step progress and named sign-off |
+| People & training | Add/edit staff, activate/deactivate, assign modules, record completion |
+| Insights | Order issue rate, first-check pass rate, count discrepancy rate, waste cost, issue categories, discrepancy register, payback scenario, CSV/JSON exports |
 
-**Stock ledger:** A movement records the before/after stock, quantity difference, reference note, acting employee, timestamp, and then-current unit cost. Physical counts set the *actual balance* rather than applying a delta.
+**Stock ledger:** every movement keeps the before/after balance, delta, reference note, acting employee, timestamp, and the unit cost in force at that moment. A physical count sets the observed balance instead of applying a delta. Negative balances are refused.
 
-**Verification:** The acting verifier must be different from the employee who prepared the order. Successful verification requires confirmation of drink items, modifiers, seal, and labels. Failures require an issue category and description; the order returns for correction.
+**Verification:** the checker must be a different active employee from the preparer. When the acting employee is the preparer, the interface replaces the verify action with **Change checker** instead of letting a self-check start. A pass requires all four quality checks; a failure requires an issue category and a note, and returns the order for correction with both checks kept on the record.
 
-**Payback:** Enter one-time setup/training costs, monthly tool cost, and expected monthly improvements. Payback = (setup + training) / (estimated monthly waste reduction + refund savings + added margin - recurring tool cost). Results are scenarios, not demonstrated impact.
+**Payback:** Payback = (setup + training) / (waste savings + refund savings + added margin − monthly tool cost). Results are scenarios derived from your own inputs, not measured outcomes.
 
-**Exports:** Download CSV stock movement history, CSV order records, or a JSON snapshot. CSV export sanitizes spreadsheet-formula prefixes in text values. There is no automatic cloud backup or JSON-import feature.
+**Exports:** stock-ledger CSV, orders CSV, and a JSON snapshot, generated in the browser. CSV cells that begin with `= + - @` are prefixed with an apostrophe so spreadsheets treat them as text. There is no cloud backup and no JSON import.
 
 ## Architecture
 
 ```text
-bigbrew-operations/
-├── index.html               # HTML entry point
-├── server.mjs               # Self-contained static development server
+.
+├── index.html               # Entry point; loads /dist/main.js as a module
+├── server.mjs               # Static server with MIME types, CSP, path containment
 ├── package.json
 ├── tsconfig.json
+├── scripts/
+│   ├── build.mjs            # Single build: validates output, regenerates public/
+│   ├── source-hash.mjs      # Hash of sources, used to detect stale compiled files
+│   └── ui-qa.mjs            # Real-browser regression suite (starts its own server)
 ├── src/
-│   ├── domain.ts            # Typed entities, validation and pure business rules
-│   ├── seed.ts              # Identified sample data and empty database
-│   ├── store.ts             # Versioned localStorage persistence
-│   ├── format.ts            # Safe escaping and Philippine-localized formatting
-│   ├── views.ts             # Semantic view templates and reusable controls
-│   ├── main.ts              # App state, event delegation and workflows
-│   └── styles.css           # Com-inspired tokens, responsive layouts and motion
-├── dist/                    # Precompiled ES modules, committed for instant startup
-├── tests/
-│   └── domain.test.mjs      # Node's built-in test runner, no test dependencies
+│   ├── domain.ts            # Types, validation, and every state transition (pure)
+│   ├── seed.ts              # Identified sample data and the empty workspace
+│   ├── store.ts             # Versioned localStorage persistence, backup of unreadable data
+│   ├── format.ts            # Escaping and Philippine-localized formatting
+│   ├── views.ts             # Semantic templates per page plus shared controls
+│   ├── main.ts              # UI state, delegated events, focus management, rendering
+│   └── styles.css           # Tokens, components, responsive ownership, motion
+├── dist/                    # Compiled ES modules (generated; committed for instant start)
+├── public/                  # Deployment output (generated; ignored by git)
+├── tests/domain.test.mjs    # Pure business-rule regression tests
 └── docs/
     ├── SOURCE_MAP.md        # Capstone-to-feature mapping
-    └── QA.md                # Test report and limitations
+    ├── QA.md                # Verification report, gates, and limitations
+    └── REVIEW.md            # Engineering, product, and anti-slop critique
 ```
+
+`dist/` and `public/` are produced only by `npm run build`; nothing is copied by hand. `public/` is deleted and rebuilt on every build, so stale modules cannot survive. `dist/build-info.json` records a hash of the sources and `server.mjs` warns when the compiled files no longer match.
+
+The prototype intentionally uses **no React/Vite runtime** and no backend. The choice differs from the fallback stack in the brief but preserves its requirements for modularity, accessible HTML, responsive design, and no hidden services.
 
 ## Data and integrity limitations
 
-- The demo is for **one locally managed branch**. Staff names, inventory levels, orders, and prices in sample records are illustrative.
-- The employee selector identifies the person recording a local action, but **is not authentication, authorization, or a real electronic signature**. Do not use the demo as a secure audit system.
-- There is **no synchronized multi-user database**, supplier API, payment gateway, POS integration, sales ingestion, or automated inventory deduction from recipes. Stock usage must be entered explicitly.
-- Ingredient-level “best before” dates are informational; this prototype does not track separate lots or automate FIFO/FEFO allocation.
-- Order error rates use verified orders with at least one failed check divided by all orders with a check, excluding cancelled orders. First-pass rate uses first passed verification divided by checked orders.
-- Count discrepancy rate uses count events with a nonzero adjustment divided by all physical-count events; mixed units are not summed.
-- The PDF proposes field surveys, interviews, pilots, and cost-benefit assessment. This prototype does **not** assert those activities were conducted.
-
-## Validation
-
-`npm run build` and `npm test` pass in the delivery environment (7 domain tests). See `docs/QA.md` for the exact test boundaries. Automated in-browser layout and end-to-end tests were **blocked by this environment's browser navigation policy**, so these items are not claimed as verified.
+- One locally managed branch. Staff names, stock levels, orders, and prices in the sample are illustrative.
+- The employee selector records **who is acting locally**. It is not authentication, authorization, or an electronic signature, and it must not be used as a secure audit system.
+- There is no synchronized multi-user database, supplier API, payment gateway, POS integration, sales ingestion, or recipe-based deduction. Stock use is entered explicitly.
+- “Best before” dates are informational; lots are not tracked and no FIFO/FEFO allocation happens.
+- Order issue rate = orders with at least one failed check ÷ orders with at least one check, excluding cancelled orders. First-check pass rate uses the first recorded check only.
+- Count discrepancy rate = physical counts with a nonzero adjustment ÷ all physical counts. Mixed units are never summed.
+- The feasibility study proposes surveys, interviews, pilots, and cost-benefit assessment. This prototype does **not** claim those activities were conducted.
 
 ## Deploy on Vercel from GitHub
 
-The repository includes `vercel.json` and a precompiled `public/` website.
-Link the GitHub repository to a Vercel project named `bigbrewww` with the
-project root at the repository root. Vercel will publish only the `public/`
-directory; the `src/`, `tests/`, and `docs/` folders remain in the repository
-for maintainability and auditability. Runtime dependencies and secrets are not
-required. If `bigbrewww.vercel.app` is available, it can be the project's
-production domain.
+`vercel.json` runs `npm run build` and publishes only `public/`; `src/`, `dist/`, `tests/`, and `docs/` stay in the repository. No runtime dependency or secret is required.
 
-To refresh the published files after editing TypeScript, run `npm run build`,
-then copy `dist/*.js` into `public/dist/`; to publish stylesheet changes,
-copy `src/styles.css` to `public/src/styles.css`. Commit those generated files
-alongside source changes.
+After editing TypeScript or CSS, run `npm run build` once — it regenerates `public/` from `index.html`, `src/styles.css`, and the compiled modules, and fails if any referenced asset is missing. Do not copy files into `public/` manually.
