@@ -2,11 +2,11 @@
 
 Independent educational prototype. Not created for, endorsed by, or connected to BigBrew. No official or live store data is included.
 
-This project turns the uploaded *Feasibility Study on Operational Management Improvement for BigBrew* into a working offline operations workspace, using the uploaded Com `DESIGN.md` as its visual design reference.
+This project turns the uploaded *Feasibility Study on Operational Management Improvement for BigBrew* into a working shift operations workspace, using the uploaded Com `DESIGN.md` as its visual design reference. It runs offline in a single browser, and — when a branch database is configured — as one shared workspace that every device in the branch reads and writes.
 
 ## Start the app
 
-**Requirements:** Node.js 18 or newer. No web accounts, API keys, external service, or framework installation is required to run the included build.
+**Requirements:** Node.js 18 or newer. No framework installation is required to run the included build.
 
 1. Extract the entire project ZIP.
 2. Open a terminal in the project folder.
@@ -15,9 +15,27 @@ This project turns the uploaded *Feasibility Study on Operational Management Imp
 
 `dist/` ships with the project, so the first run needs no install and no network. The server refuses to start with a readable message if a required file is missing, and warns when `dist/` no longer matches the sources.
 
-The first visit loads **clearly identified example records**. Select **Start with empty data** to begin with your own records. Add an employee first, then choose the acting operator in the top bar.
+With no database configured, the app opens in the clearly labelled **offline workspace** and keeps records in that browser's `localStorage` under `bigbrew-branchwork-v1`. The first offline visit loads example records; choose **Start with empty data** to begin with your own. Add an employee first, then select the acting operator in the top bar.
 
-Data persists in that browser's `localStorage` under `bigbrew-branchwork-v1`. Clearing site data, using another browser, or replacing a sample workspace discards local records. Export a JSON backup before doing any of those.
+### Live branch workspace (Postgres)
+
+Set two environment variables — in `.env` for local use, or in Vercel → Settings → Environment Variables for a deployment:
+
+| Variable | Meaning |
+| --- | --- |
+| `DATABASE_URL` | Neon Postgres connection string (pooled). Queried over HTTP, so no connection pool is exhausted by serverless invocations. |
+| `BRANCHWORK_ACCESS_KEY` | Long passphrase shared with the branch. Every API request must carry it; the browser only ever receives it from staff typing it into the unlock screen. |
+| `BRANCHWORK_WORKSPACE_ID` | Optional. One database can hold more than one branch row; defaults to `main`. |
+
+Then create the table once:
+
+```bash
+npm run db:migrate        # applies db/schema.sql through DATABASE_URL
+```
+
+With both variables set, the app reports **Live branch workspace**, asks for the access key before showing any record, and saves every change to one `branchwork_workspace` row. Writes are optimistic: the client sends the revision it read, the update applies only if that revision is still current, and a conflict makes the browser adopt the newer server copy instead of overwriting another device. Losing the database drops the app back into the labelled offline workspace rather than failing.
+
+`.env.example` lists every variable. Never commit `.env`.
 
 ## Commands
 
@@ -25,9 +43,12 @@ Data persists in that browser's `localStorage` under `bigbrew-branchwork-v1`. Cl
 | --- | --- |
 | `npm start` | Serves the app at `http://localhost:4173` (set `PORT` to change it) |
 | `npm run build` | Compiles TypeScript into `dist/` **and** regenerates the `public/` deployment output |
-| `npm test` | Builds, then runs the domain regression suite (14 tests, Node's built-in runner) |
-| `npm run qa` | Builds nothing; drives the served app in Chromium and reports 27 end-to-end checks |
-| `npm run check` | `npm test` followed by `npm run qa` |
+| `npm test` | Builds, then runs 24 tests: 14 domain rules and 10 live-workspace API tests |
+| `npm run qa` | Drives the served app in Chromium and reports every end-to-end check |
+| `npm run qa:live` | Same, against a live workspace (file-backed test store or a real database) |
+| `npm run db:migrate` | Applies `db/schema.sql` using `DATABASE_URL` |
+| `npm run check` | `npm test`, then `npm run qa`, then `npm run qa:live` |
+| `node "skills/Anti-Slop (AJONAI)/scripts/check.mjs" src/ index.html` | Static anti-slop audit of the front-end source |
 
 `npm run qa` needs a Chromium build for Playwright: run `npx playwright install chromium` once, and install the shared libraries (`npx playwright install-deps chromium`, or the equivalent for your distribution). On minimal containers, a missing fontconfig or NSS library makes Chromium abort before any page loads; the suite reports that as a bootstrap failure rather than a product failure.
 
@@ -48,53 +69,77 @@ Data persists in that browser's `localStorage` under `bigbrew-branchwork-v1`. Cl
 
 **Payback:** Payback = (setup + training) / (waste savings + refund savings + added margin − monthly tool cost). Results are scenarios derived from your own inputs, not measured outcomes.
 
-**Exports:** stock-ledger CSV, orders CSV, and a JSON snapshot, generated in the browser. CSV cells that begin with `= + - @` are prefixed with an apostrophe so spreadsheets treat them as text. There is no cloud backup and no JSON import.
+**Exports:** stock-ledger CSV, orders CSV, and a JSON snapshot, generated in the browser. CSV cells that begin with `= + - @` are prefixed with an apostrophe so spreadsheets treat them as text. There is no JSON import.
 
 ## Architecture
 
 ```text
 .
 ├── index.html               # Entry point; loads /dist/main.js as a module
-├── server.mjs               # Static server with MIME types, CSP, path containment
-├── package.json
+├── server.mjs               # Static server with MIME types, CSP, path containment,
+│                            #   and the /api routes for live storage
+├── server/workspace.mjs     # Live backend: auth, validation, optimistic revisions,
+│                            #   Neon (HTTP) and file repositories
+├── api/config.js            # Vercel function: is live storage configured?
+├── api/state.js             # Vercel function: GET/PUT the branch workspace
+├── db/schema.sql            # One-row-per-branch Postgres table
+├── assets/
+│   ├── bigbrew-mark.png     # Brand emblem used in the shell and unlock screen
+│   └── favicon.png          # Real emblem, transparent, no frame
+├── vercel.json              # Builds on deploy and publishes only public/
 ├── tsconfig.json
 ├── scripts/
 │   ├── build.mjs            # Single build: validates output, regenerates public/
 │   ├── source-hash.mjs      # Hash of sources, used to detect stale compiled files
-│   └── ui-qa.mjs            # Real-browser regression suite (starts its own server)
+│   ├── migrate.mjs          # Applies db/schema.sql through DATABASE_URL
+│   ├── ui-qa.mjs            # Real-browser regression suite (starts its own server)
+│   └── live-qa.mjs          # Same suite against a live workspace
 ├── src/
 │   ├── domain.ts            # Types, validation, and every state transition (pure)
 │   ├── seed.ts              # Identified sample data and the empty workspace
-│   ├── store.ts             # Versioned localStorage persistence, backup of unreadable data
+│   ├── store.ts             # Storage layer: live workspace, offline fallback, sync status
 │   ├── format.ts            # Escaping and Philippine-localized formatting
 │   ├── views.ts             # Semantic templates per page plus shared controls
 │   ├── main.ts              # UI state, delegated events, focus management, rendering
 │   └── styles.css           # Tokens, components, responsive ownership, motion
 ├── dist/                    # Compiled ES modules (generated; committed for instant start)
 ├── public/                  # Deployment output (generated; ignored by git)
-├── tests/domain.test.mjs    # Pure business-rule regression tests
+├── skills/
+│   └── Anti-Slop (AJONAI)/  # Third-party design audit skill, vendored for reproducibility
+├── tests/
+│   ├── domain.test.mjs      # Pure business-rule regression tests
+│   └── live-api.test.mjs    # Live workspace API, auth, and concurrency tests
 └── docs/
     ├── SOURCE_MAP.md        # Capstone-to-feature mapping
     ├── QA.md                # Verification report, gates, and limitations
-    └── REVIEW.md            # Engineering, product, and anti-slop critique
+    ├── ANTI-SLOP.md         # Design decision sheet and anti-slop audit
+    └── REVIEW.md            # Engineering, product, and design critique
 ```
 
 `dist/` and `public/` are produced only by `npm run build`; nothing is copied by hand. `public/` is deleted and rebuilt on every build, so stale modules cannot survive. `dist/build-info.json` records a hash of the sources and `server.mjs` warns when the compiled files no longer match.
 
-The prototype intentionally uses **no React/Vite runtime** and no backend. The choice differs from the fallback stack in the brief but preserves its requirements for modularity, accessible HTML, responsive design, and no hidden services.
+The interface is dependency-free TypeScript compiled to ES modules — no React, no bundler, no runtime package on the client. The only runtime dependency is `@neondatabase/serverless`, used server-side for live storage.
 
 ## Data and integrity limitations
 
-- One locally managed branch. Staff names, stock levels, orders, and prices in the sample are illustrative.
-- The employee selector records **who is acting locally**. It is not authentication, authorization, or an electronic signature, and it must not be used as a secure audit system.
-- There is no synchronized multi-user database, supplier API, payment gateway, POS integration, sales ingestion, or recipe-based deduction. Stock use is entered explicitly.
+- Sample records are illustrative. Staff names, stock levels, orders, and prices in the seed data are not BigBrew measurements.
+- The employee selector records **who is acting**. It is not authentication, authorization, or an electronic signature, and it must not be used as a secure audit system. In live mode the branch access key protects the workspace as a whole, not individual people.
+- Live mode shares one workspace; it is not a permissioned multi-user system. There is no supplier API, payment gateway, POS integration, sales ingestion, or recipe-based deduction. Stock use is entered explicitly.
 - “Best before” dates are informational; lots are not tracked and no FIFO/FEFO allocation happens.
 - Order issue rate = orders with at least one failed check ÷ orders with at least one check, excluding cancelled orders. First-check pass rate uses the first recorded check only.
 - Count discrepancy rate = physical counts with a nonzero adjustment ÷ all physical counts. Mixed units are never summed.
 - The feasibility study proposes surveys, interviews, pilots, and cost-benefit assessment. This prototype does **not** claim those activities were conducted.
 
+## Design and anti-slop review
+
+The interface follows the supplied Com design system: warm paper ground `#FAF6F0`, coffee ink `#251508`, supporting text `#61554A`, interactive blue `#0D6EFD`, mostly 8–16 px radii, restrained shadows. Gilroy is named by that system but no licence or font files were supplied, so the type stack falls back to system faces and no Gilroy claim is made.
+
+The [AJONAI Anti-Slop skill](https://github.com/ItsRealAJ/Anti-Slop-Frontend-Skill) is vendored in `skills/` and was used to audit the front end. `docs/ANTI-SLOP.md` records the decision sheet it forced into writing, every finding with its file and line, the corrections made, and what was deliberately left alone.
+
 ## Deploy on Vercel from GitHub
 
-`vercel.json` runs `npm run build` and publishes only `public/`; `src/`, `dist/`, `tests/`, and `docs/` stay in the repository. No runtime dependency or secret is required.
+`vercel.json` runs `npm run build` and publishes only `public/`; `src/`, `dist/`, `tests/`, and `docs/` stay in the repository. No runtime dependency is required for the offline workspace.
 
-After editing TypeScript or CSS, run `npm run build` once — it regenerates `public/` from `index.html`, `src/styles.css`, and the compiled modules, and fails if any referenced asset is missing. Do not copy files into `public/` manually.
+To publish the shared branch workspace, add `DATABASE_URL` and `BRANCHWORK_ACCESS_KEY` in Vercel → Settings → Environment Variables, run `npm run db:migrate` once against that database, and redeploy. Without them the deployment still works and reports the labelled offline workspace.
+
+After editing TypeScript or CSS, run `npm run build` once — it regenerates `public/` from `index.html`, `src/styles.css`, `assets/`, and the compiled modules, and fails if any referenced asset is missing. Do not copy files into `public/` manually.

@@ -48,9 +48,12 @@ for (const name of expectedModules) {
 
 const indexHtml = await readFile(join(root, 'index.html'), 'utf8');
 const references = [...indexHtml.matchAll(/(?:href|src)="\/([^"#?]+)"/g)].map((match) => match[1]);
-const required = ['dist/main.js', 'src/styles.css'];
+const required = ['dist/main.js', 'src/styles.css', 'assets/favicon.png'];
 for (const reference of required) {
   if (!references.includes(reference)) fail(`index.html must reference /${reference}`);
+}
+for (const asset of ['assets/bigbrew-mark.png', 'assets/favicon.png']) {
+  if (!(await exists(join(root, asset)))) fail(`Missing ${asset}`);
 }
 for (const reference of references) {
   if (!(await exists(join(root, reference)))) fail(`index.html references missing file /${reference}`);
@@ -63,6 +66,7 @@ await mkdir(join(publicDir, 'dist'), { recursive: true });
 await mkdir(join(publicDir, 'src'), { recursive: true });
 await cp(join(root, 'index.html'), join(publicDir, 'index.html'));
 await cp(join(root, 'src/styles.css'), join(publicDir, 'src/styles.css'));
+await cp(join(root, 'assets'), join(publicDir, 'assets'), { recursive: true });
 for (const name of expectedModules) {
   await cp(join(dist, name), join(publicDir, 'dist', name));
 }

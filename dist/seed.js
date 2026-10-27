@@ -1,5 +1,5 @@
 const iso = (days) => new Date(Date.now() + days * 86400000).toISOString();
-export function emptyDatabase() { return { version: 1, mode: 'local', branchName: 'Prototype branch', ingredients: [], movements: [], employees: [], orders: [], checklists: [], trainings: [], costs: { setup: 0, training: 0, monthlyTool: 0, wasteSavings: 0, refundSavings: 0, addedMargin: 0 } }; }
+export function emptyDatabase(mode = 'local', branchName = 'BigBrew branch') { return { version: 1, mode, branchName, ingredients: [], movements: [], employees: [], orders: [], checklists: [], trainings: [], costs: { setup: 0, training: 0, monthlyTool: 0, wasteSavings: 0, refundSavings: 0, addedMargin: 0 } }; }
 export function demoDatabase() {
     const staff = [{ id: 'st-a', name: 'Alex Rivera', role: 'Manager', active: true }, { id: 'st-b', name: 'Sam Cruz', role: 'Staff', active: true }, { id: 'st-c', name: 'Jamie Santos', role: 'Staff', active: true }];
     const ingredients = [

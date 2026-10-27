@@ -1,7 +1,7 @@
 import type { Database,Ingredient,StockMovement,Employee,Order,Training } from './domain.js';
 
 const iso=(days:number)=>new Date(Date.now()+days*86400000).toISOString();
-export function emptyDatabase():Database {return {version:1,mode:'local',branchName:'Prototype branch',ingredients:[],movements:[],employees:[],orders:[],checklists:[],trainings:[],costs:{setup:0,training:0,monthlyTool:0,wasteSavings:0,refundSavings:0,addedMargin:0}};}
+export function emptyDatabase(mode:'local'|'live'='local',branchName='BigBrew branch'):Database {return {version:1,mode,branchName,ingredients:[],movements:[],employees:[],orders:[],checklists:[],trainings:[],costs:{setup:0,training:0,monthlyTool:0,wasteSavings:0,refundSavings:0,addedMargin:0}};}
 export function demoDatabase():Database{
  const staff:Employee[]=[{id:'st-a',name:'Alex Rivera',role:'Manager',active:true},{id:'st-b',name:'Sam Cruz',role:'Staff',active:true},{id:'st-c',name:'Jamie Santos',role:'Staff',active:true}];
  const ingredients:Ingredient[]=[

@@ -42,7 +42,7 @@ const empty = (title, body, action = '') => `<div class="empty-state"><p class="
 const pageHead = (title, sub, actions = '', meta = '') => `<header class="page-head"><div class="page-title-group">${meta ? `<p class="page-meta">${meta}</p>` : ''}<h1 id="page-title" tabindex="-1">${esc(title)}</h1><p class="page-sub">${esc(sub)}</p></div>${actions ? `<div class="page-actions">${actions}</div>` : ''}</header>`;
 const sectionHead = (title, right = '', id = '') => `<div class="section-head"><h2 ${id ? `id="${esc(id)}"` : ''}>${title}</h2>${right}</div>`;
 const countBadge = (n, label) => `<span class="count-badge">${fmtNum(n)}<span class="visually-hidden"> ${esc(label)}</span></span>`;
-const progress = (done, total, label) => `<div class="progress" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}" aria-valuetext="${done} of ${total} steps complete"><span style="width:${total ? Math.round(done / total * 100) : 0}%"></span></div>`;
+const progress = (done, total, label) => `<div class="progress" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}" aria-valuetext="${done} of ${total} steps complete"><span style="--fill:${(total ? done / total : 0).toFixed(3)}"></span></div>`;
 const actorOptions = (db, selected) => db.employees.filter(e => e.active).map(e => `<option value="${esc(e.id)}" ${e.id === selected ? 'selected' : ''}>${esc(e.name)} · ${esc(e.role)}</option>`).join('');
 const operator = (db, ui) => {
     const active = db.employees.filter(e => e.active);
@@ -88,17 +88,20 @@ const actionFor = (db, o, ui) => {
         return canAct ? { action: 'prepare-order', label: 'Mark prepared' } : { action: 'focus-operator', label: 'Select staff' };
     return { action: 'view-order', label: 'View record' };
 };
-export function appView(db, ui) {
+export function appView(db, ui, sync = { "kind": "local", "detail": "Saved in this browser only" }) {
     const current = pageTitle(ui.page);
+    const live = db.mode === 'live' && sync.kind !== 'offline' && sync.kind !== 'error';
     return `<a class="skip-link" href="#main-content">Skip to main content</a>
  <div class="shell" ${ui.modal ? 'inert' : ''}>
  <aside class="sidebar" id="app-sidebar" aria-label="Workspace navigation">
    <div class="sidebar-brand-row">
-     <div class="brand"><div class="brand-emblem" aria-hidden="true">B<span>.</span></div><div class="brand-name">BRANCHWORK<small>BigBrew operations</small></div></div>
+     <div class="brand"><img class="brand-emblem" src="/assets/bigbrew-mark.png" alt="" width="56" height="38" decoding="async"><div class="brand-name">BRANCHWORK<small>BigBrew operations</small></div></div>
      <button type="button" class="icon-btn sidebar-close" data-action="mobile-toggle" aria-label="Close navigation">${icon('close', 20)}</button>
    </div>
    <nav class="nav-stack" aria-label="Primary">${navItems.map(([p, title, i]) => `<button type="button" data-action="nav" data-page="${p}" class="nav-link ${ui.page === p ? 'is-selected' : ''}" ${ui.page === p ? 'aria-current="page"' : ''}>${icon(i, 19)}<span>${esc(title)}</span></button>`).join('')}</nav>
-   <div class="sidebar-foot"><p class="sidebar-note">Local-first prototype<span>Records stay in this browser. No account or cloud sync.</span></p></div>
+   <div class="sidebar-foot">
+     <p class="sidebar-note"><span class="sync-line" data-sync="${esc(sync.kind)}"><span class="sync-dot" aria-hidden="true"></span><span data-sync-label>${esc(live ? 'Live branch workspace' : sync.kind === 'local' ? 'Offline workspace' : 'Reconnecting')}</span></span><span data-sync-detail>${esc(live ? 'Shared Postgres workspace. Every change is saved to the branch database.' : sync.detail)}</span></p>
+   </div>
  </aside>
  <button type="button" class="drawer-scrim" data-action="mobile-toggle" aria-label="Close navigation" aria-hidden="true" tabindex="-1"></button>
  <div class="app-main">
@@ -113,9 +116,9 @@ export function appView(db, ui) {
      </div>
    </header>
    <main class="page" id="main-content" tabindex="-1">
-     ${db.mode === 'sample' ? `<div class="notice notice-sample"><span class="notice-mark" aria-hidden="true">${icon('alert', 18)}</span><p><strong>Sample workspace.</strong> Every record is illustrative, not a measured BigBrew result.</p>${button('Start with empty data', 'confirm-blank', 'btn btn-secondary btn-sm')}</div>` : `<div class="notice notice-local"><span class="notice-mark" aria-hidden="true">${icon('shield', 17)}</span><p><strong>Local workspace.</strong> Saved on this browser only.</p>${button('Load sample workspace', 'confirm-sample', 'btn btn-quiet btn-sm')}</div>`}
+     ${db.mode === 'sample' ? `<div class="notice notice-sample"><span class="notice-mark" aria-hidden="true">${icon('alert', 18)}</span><p><strong>Sample workspace.</strong> Every record is illustrative, not a measured BigBrew result.</p>${button('Clear sample data', 'confirm-blank', 'btn btn-secondary btn-sm')}</div>` : live ? `<div class="notice notice-live" data-sync="${esc(sync.kind)}"><span class="notice-mark" aria-hidden="true">${icon('shield', 17)}</span><p><strong>${esc(sync.kind === 'saving' ? 'Saving…' : sync.kind === 'error' ? 'Not saved' : 'Live branch workspace.')}</strong> <span data-sync-detail>${esc(sync.detail)}</span></p>${button('Load sample data', 'confirm-sample', 'btn btn-quiet btn-sm')}</div>` : `<div class="notice notice-local"><span class="notice-mark" aria-hidden="true">${icon('alert', 17)}</span><p><strong>Offline workspace.</strong> ${esc(sync.detail)}. Configure the branch database to share records across devices.</p>${button('Load sample data', 'confirm-sample', 'btn btn-quiet btn-sm')}</div>`}
      ${ui.page === 'overview' ? overview(db, ui) : ui.page === 'inventory' ? inventory(db, ui) : ui.page === 'orders' ? orders(db, ui) : ui.page === 'checklists' ? checklists(db, ui) : ui.page === 'team' ? team(db) : insights(db)}
-     <footer class="page-footer"><span>Branchwork · Independent operations prototype</span><span>Not official BigBrew software · No records leave this device</span></footer>
+     <footer class="page-footer"><span>Branchwork · BigBrew operations workspace</span><span>${live ? 'Records are stored in the branch database' : 'Records stay in this browser'}</span></footer>
    </main>
  </div>
  <nav class="mobile-dock" aria-label="Quick navigation">
@@ -124,6 +127,25 @@ export function appView(db, ui) {
  </nav>
  </div>
  ${ui.modal ? renderModal(db, ui) : ''}`;
+}
+/**
+ * Shown before the app when the live workspace is locked. It is deliberately
+ * outside the shell so no workspace data is rendered before the key is checked.
+ */
+export function gateView(message, sync) {
+    return `<a class="skip-link" href="#gate-form">Skip to unlock form</a>
+ <main class="gate">
+   <form class="gate-card" id="gate-form" data-form="unlock">
+     <img class="gate-mark" src="/assets/bigbrew-mark.png" alt="BigBrew" width="84" height="57">
+     <p class="section-kicker">Branchwork · BigBrew operations</p>
+     <h1>Unlock the branch workspace</h1>
+     <p class="gate-lede">This workspace is stored in the shared branch database. Enter the branch access key to load live records.</p>
+     ${message ? `<p class="form-error" role="alert">${esc(message)}</p>` : ''}
+     <label class="field"><span>Branch access key</span><input name="key" type="password" autocomplete="current-password" required autofocus></label>
+     <div class="gate-actions"><button type="submit" class="btn btn-primary">Unlock workspace ${icon('arrow', 16)}</button></div>
+     <p class="gate-foot">${esc(sync.detail || 'No workspace data is shown until the key is accepted.')}</p>
+   </form>
+ </main>`;
 }
 function recentActivity(db) {
     return [

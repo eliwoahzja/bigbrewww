@@ -1,13 +1,64 @@
 import { demoDatabase, emptyDatabase } from './seed.js';
+/**
+ * Two storage paths behind one API.
+ *
+ * - Live: the branch workspace in Postgres, reached through /api/state with a
+ *   shared access key. Every write carries the revision it was based on, so a
+ *   second device cannot silently overwrite the first.
+ * - Offline: the original localStorage path, used when no database is
+ *   configured or the API cannot be reached. It is labelled in the interface.
+ */
 export const STORAGE_KEY = 'bigbrew-branchwork-v1';
 const DAMAGE_KEY = `${STORAGE_KEY}:unreadable`;
-export let storageIssue = '';
+const ACCESS_KEY = 'bigbrew-branchwork-key';
+const CONFIG_API = '/api/config';
+const STATE_API = '/api/state';
+export class LockedError extends Error {
+}
+let accessKey = readSessionKey();
+let live = false;
+let revision = 0;
+let info = { kind: 'connecting', detail: 'Checking where this workspace is stored', revision: 0, updatedAt: '' };
+let queue = Promise.resolve();
+let remoteListener = null;
+const listeners = new Set();
+function readSessionKey() {
+    try {
+        return sessionStorage.getItem(ACCESS_KEY) || '';
+    }
+    catch {
+        return '';
+    }
+}
+function setInfo(patch) {
+    info = { ...info, ...patch };
+    listeners.forEach(listener => listener());
+}
+export const syncInfo = () => info;
+export function onSyncChange(listener) {
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
+}
+export function setAccessKey(value) {
+    accessKey = value.trim();
+    try {
+        if (accessKey)
+            sessionStorage.setItem(ACCESS_KEY, accessKey);
+        else
+            sessionStorage.removeItem(ACCESS_KEY);
+    }
+    catch { /* private mode: the key lives for this page only */ }
+}
+export function hasAccessKey() { return accessKey.length > 0; }
+export function onRemoteChange(listener) { remoteListener = listener; }
+export const isLive = () => live;
+export const currentRevision = () => revision;
 function isDatabase(value) {
     if (!value || typeof value !== 'object')
         return false;
     const data = value;
     return data.version === 1
-        && (data.mode === 'sample' || data.mode === 'local')
+        && (data.mode === 'sample' || data.mode === 'local' || data.mode === 'live')
         && typeof data.branchName === 'string'
         && Array.isArray(data.ingredients)
         && Array.isArray(data.orders)
@@ -23,7 +74,8 @@ function preserve(raw) {
     }
     catch { /* storage may be full or disabled */ }
 }
-export function load() {
+export let storageIssue = '';
+function loadLocal() {
     let raw = '';
     try {
         raw = localStorage.getItem(STORAGE_KEY) || '';
@@ -41,15 +93,139 @@ export function load() {
         return demoDatabase();
     }
 }
-export function save(db) {
+function saveLocal(db) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        storageIssue = '';
     }
     catch {
         storageIssue = 'Browser storage is unavailable or full. Recent changes might not survive a refresh.';
     }
 }
-export function blank() { const db = emptyDatabase(); save(db); return db; }
+function workspaceError(payload, fallback) {
+    if (payload && typeof payload === 'object' && 'message' in payload && typeof payload.message === 'string') {
+        return payload.message;
+    }
+    return fallback;
+}
+async function readConfig() {
+    const response = await fetch(CONFIG_API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!response.ok)
+        throw Error('unavailable');
+    return response.json();
+}
+async function pull() {
+    const headers = { Accept: 'application/json' };
+    if (accessKey)
+        headers['x-branchwork-key'] = accessKey;
+    const response = await fetch(STATE_API, { headers, cache: 'no-store' });
+    const payload = await response.json().catch(() => null);
+    if (response.status === 401)
+        throw new LockedError('This branch workspace needs its access key.');
+    if (!response.ok)
+        throw Error(workspaceError(payload, 'The branch database did not answer.'));
+    if (!payload || !isDatabase(payload.data))
+        throw Error('The branch database returned an unreadable workspace.');
+    return { database: payload.data, revision: Number(payload.revision) || 1, updatedAt: String(payload.updatedAt || '') };
+}
+/** First load. Falls back to the labelled offline workspace when the API is absent. */
+export async function init() {
+    live = false;
+    let config;
+    try {
+        config = await readConfig();
+    }
+    catch {
+        const db = loadLocal();
+        setInfo({ kind: 'local', detail: 'Saved in this browser only', revision: 0, updatedAt: '' });
+        return db;
+    }
+    if (config.mode !== 'live') {
+        const db = loadLocal();
+        setInfo({ kind: 'local', detail: 'No branch database configured', revision: 0, updatedAt: '' });
+        return db;
+    }
+    if (config.requiresKey && !accessKey)
+        throw new LockedError('This branch workspace needs its access key.');
+    let remote;
+    try {
+        remote = await pull();
+    }
+    catch (error) {
+        if (error instanceof LockedError)
+            throw error;
+        const db = loadLocal();
+        setInfo({ kind: 'offline', detail: 'Branch database unreachable — changes stay in this browser', revision: 0, updatedAt: '' });
+        return db;
+    }
+    live = true;
+    revision = remote.revision;
+    setInfo({ kind: 'live', detail: 'Synced to the branch database', revision: remote.revision, updatedAt: remote.updatedAt });
+    return remote.database;
+}
+/** Load the newest server copy, if it is newer than what this tab has. */
+export async function refresh() {
+    if (!live)
+        return null;
+    try {
+        const remote = await pull();
+        if (remote.revision <= revision)
+            return null;
+        revision = remote.revision;
+        setInfo({ kind: 'live', detail: 'Updated from another device', revision, updatedAt: remote.updatedAt });
+        return remote.database;
+    }
+    catch (error) {
+        if (error instanceof LockedError) {
+            setInfo({ kind: 'error', detail: 'Access key rejected — reload to unlock' });
+        }
+        else
+            setInfo({ kind: 'error', detail: 'Could not reach the branch database', revision, updatedAt: info.updatedAt });
+        return null;
+    }
+}
+async function push(db) {
+    if (!live)
+        return;
+    setInfo({ kind: 'saving', detail: 'Saving to the branch database' });
+    try {
+        const response = await fetch(STATE_API, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-branchwork-key': accessKey },
+            body: JSON.stringify({ revision, data: db }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (response.status === 409) {
+            const data = payload?.data;
+            if (isDatabase(data)) {
+                revision = Number(payload.revision) || revision + 1;
+                setInfo({ kind: 'live', detail: 'Another device saved first — this workspace caught up', revision, updatedAt: String(payload.updatedAt || '') });
+                remoteListener?.(data);
+                return;
+            }
+            setInfo({ kind: 'error', detail: 'Save conflict — reload before editing', revision, updatedAt: info.updatedAt });
+            return;
+        }
+        if (!response.ok) {
+            setInfo({ kind: 'error', detail: workspaceError(payload, 'Changes are not saved to the branch database'), revision, updatedAt: info.updatedAt });
+            return;
+        }
+        revision = Number(payload?.revision) || revision + 1;
+        setInfo({ kind: 'live', detail: 'Saved to the branch database', revision, updatedAt: String(payload?.updatedAt || '') });
+    }
+    catch {
+        setInfo({ kind: 'error', detail: 'Offline — changes stay in this tab until the database answers', revision, updatedAt: info.updatedAt });
+    }
+}
+/** Writes are serialised so two quick edits cannot send the same revision. */
+export function save(db) {
+    if (!live) {
+        saveLocal(db);
+        setInfo({ kind: 'local', detail: 'Saved in this browser only', revision: 0, updatedAt: '' });
+        return;
+    }
+    queue = queue.then(() => push(db)).catch(() => { });
+}
+export function blank() { const db = emptyDatabase(live ? 'live' : 'local'); save(db); return db; }
 export function sample() { const db = demoDatabase(); save(db); return db; }
 export function exportData(db) { return JSON.stringify(db, null, 2); }
+export { loadLocal as load };

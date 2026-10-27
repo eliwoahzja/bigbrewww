@@ -614,27 +614,83 @@ async function main() {
   });
 
   // --------------------------------------------------------- reduced motion
-  await check('reduced-motion preference removes long transitions', async () => {
+  await check('reduced-motion keeps feedback but removes movement', async () => {
     const calm = await context.newPage();
     calm.setDefaultTimeout(8000);
     await calm.emulateMedia({ reducedMotion: 'reduce' });
     await calm.goto(BASE, { waitUntil: 'networkidle' });
-    const durations = await calm.evaluate(() =>
-      ['.sidebar', '.toast', '.btn', '.modal-card', '.mobile-dock']
+    const surfaces = await calm.evaluate(() =>
+      ['.sidebar', '.toast', '.btn', '.modal-card', '.mobile-dock', '.progress > span', '.nav-link']
         .map((selector) => {
           const el = document.querySelector(selector);
-          if (!el) return 0;
+          if (!el) return null;
           const style = getComputedStyle(el);
-          return Math.max(
-            ...`${style.transitionDuration},${style.animationDuration}`
+          return {
+            selector,
+            max: Math.max(
+              ...`${style.transitionDuration},${style.animationDuration}`
+                .split(',')
+                .map((value) => parseFloat(value) || 0),
+            ),
+            moving: style.transitionProperty
               .split(',')
-              .map((value) => parseFloat(value) || 0),
-          );
+              .map((value) => value.trim())
+              .filter((value) => ['transform', 'width', 'height', 'top', 'left', 'margin', 'padding'].includes(value)),
+          };
         })
-        .filter((value) => value > 0.001),
+        .filter(Boolean),
     );
-    assert(durations.length === 0, `reduced motion still animates for ${durations.join('s, ')}s`);
+    for (const surface of surfaces) {
+      assert(surface.max <= 0.16, `${surface.selector} still animates for ${surface.max}s under reduced motion`);
+      assert(surface.moving.length === 0, `${surface.selector} still transitions ${surface.moving.join(', ')} under reduced motion`);
+    }
     await calm.close();
+  });
+
+  // ---------------------------------------------------- interaction states
+  await check('the states layer is themed: caret, scrollbar, press, disabled, progress', async () => {
+    const styled = await context.newPage();
+    styled.setDefaultTimeout(8000);
+    await styled.goto(BASE, { waitUntil: 'networkidle' });
+    const tokens = await styled.evaluate(() => {
+      const field = document.querySelector('.field input, #page-search');
+      const fill = document.querySelector('.progress > span');
+      const signoff = document.querySelector('.btn:disabled') || document.querySelector('button:disabled');
+      const rules = [];
+      for (const sheet of Array.from(document.styleSheets)) {
+        for (const rule of Array.from(sheet.cssRules || [])) rules.push(rule.cssText || '');
+      }
+      return {
+        caret: field ? getComputedStyle(field).caretColor : '',
+        scrollbar: getComputedStyle(document.documentElement).scrollbarColor,
+        fillTransition: fill ? getComputedStyle(fill).transitionProperty : '',
+        fillTransform: fill ? getComputedStyle(fill).transform : '',
+        disabledCursor: signoff ? getComputedStyle(signoff).cursor : '',
+        disabledOpacity: signoff ? getComputedStyle(signoff).opacity : '',
+        transitionAll: rules.filter((rule) => /transition(-property)?:\s*all\b/.test(rule)),
+      };
+    });
+    assert(tokens.caret && tokens.caret !== 'rgb(0, 0, 0)', `caret follows the accent, received ${tokens.caret}`);
+    assert(/rgb/.test(tokens.scrollbar), `scrollbar should be themed, received ${tokens.scrollbar}`);
+    assert(tokens.fillTransition.includes('transform'), `progress fill should animate transform, received ${tokens.fillTransition}`);
+    assert(!tokens.fillTransition.includes('width'), `progress fill must not animate layout width, received ${tokens.fillTransition}`);
+    assert(tokens.fillTransform !== 'none', 'progress fill should carry a --fill scale');
+    if (tokens.disabledCursor) equal(tokens.disabledCursor, 'not-allowed', 'disabled cursor');
+    if (tokens.disabledOpacity) assert(parseFloat(tokens.disabledOpacity) >= 0.9, `disabled text should stay readable, received opacity ${tokens.disabledOpacity}`);
+    assert(tokens.transitionAll.length === 0, `transition: all found in ${tokens.transitionAll.length} rule(s)`);
+
+    // Press receipt: pointer-down changes the control before release.
+    const nav = styled.locator('.nav-link').nth(1);
+    const before = await nav.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const box = await nav.boundingBox();
+    assert(box, 'nav link should have a box');
+    await styled.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await styled.mouse.down();
+    await styled.waitForTimeout(60);
+    const pressed = await nav.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await styled.mouse.up();
+    assert(pressed !== before, `pointer-down should change the control (before ${before}, pressed ${pressed})`);
+    await styled.close();
   });
 
   // -------------------------------------------------------- accessibility

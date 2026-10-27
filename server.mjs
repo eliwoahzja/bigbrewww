@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { computeSourceHash } from './scripts/source-hash.mjs';
+import { liveConfigHandler, liveStateHandler } from './server/workspace.mjs';
 
 const base = process.cwd();
 const port = Number(process.env.PORT || 4173);
@@ -11,6 +12,7 @@ const types = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
@@ -18,7 +20,7 @@ const types = {
 };
 const security = {
   'Content-Security-Policy':
-    "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -33,7 +35,7 @@ const exists = async (path) => {
 };
 
 const missing = [];
-for (const file of ['index.html', 'src/styles.css', 'dist/main.js']) {
+for (const file of ['index.html', 'src/styles.css', 'dist/main.js', 'assets/bigbrew-mark.png']) {
   if (!(await exists(resolve(base, file)))) missing.push(file);
 }
 if (missing.length) {
@@ -52,9 +54,26 @@ try {
   console.warn('Warning: no build metadata found. Run "npm run build" to verify compiled output.');
 }
 
+const apiRoutes = new Map([
+  ['/api/config', liveConfigHandler],
+  ['/api/state', liveStateHandler],
+]);
+
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+
+    const api = apiRoutes.get(url.pathname);
+    if (api) {
+      if (req.method === 'OPTIONS') {
+        res.writeHead(405, { ...security, Allow: 'GET, PUT' });
+        res.end();
+        return;
+      }
+      await api(req, res);
+      return;
+    }
+
     const pathname = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
     const file = resolve(base, `.${pathname}`);
     if (!(file === base || file.startsWith(`${base}${sep}`))) {
@@ -77,4 +96,9 @@ createServer(async (req, res) => {
   }
 }).listen(port, () => {
   console.log(`Branchwork local workspace: http://localhost:${port}`);
+  console.log(
+    process.env.DATABASE_URL && process.env.BRANCHWORK_ACCESS_KEY
+      ? 'Live storage: Postgres branch workspace enabled.'
+      : 'Live storage: not configured — serving the offline workspace.',
+  );
 });

@@ -14,7 +14,7 @@ export interface ChecklistItem {id:string;label:string;done:boolean;}
 export interface ChecklistRun {id:string;type:ChecklistType;items:ChecklistItem[];createdAt:string;completedAt:string;startedBy:string;completedBy:string;}
 export interface Training {id:string;employeeId:string;moduleId:string;status:TrainingStatus;assignedAt:string;completedAt:string;}
 export interface CostScenario {setup:number;training:number;monthlyTool:number;wasteSavings:number;refundSavings:number;addedMargin:number;}
-export interface Database {version:1;mode:'sample'|'local';branchName:string;ingredients:Ingredient[];movements:StockMovement[];employees:Employee[];orders:Order[];checklists:ChecklistRun[];trainings:Training[];costs:CostScenario;}
+export interface Database {version:1;mode:'sample'|'local'|'live';branchName:string;ingredients:Ingredient[];movements:StockMovement[];employees:Employee[];orders:Order[];checklists:ChecklistRun[];trainings:Training[];costs:CostScenario;}
 export const trainingModules=[
   {id:'onboarding',name:'New staff onboarding',description:'Workstation setup, drink specifications, and shift responsibilities',level:'Foundation'},
   {id:'inventory',name:'Inventory handling & counts',description:'Stock receipts, counts, adjustment records, and waste controls',level:'Operations'},

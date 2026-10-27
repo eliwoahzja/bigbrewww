@@ -1,10 +1,19 @@
 import type {Database,Ingredient,StockAction,EmployeeRole,ChecklistType,NewOrderLine} from './domain.js';
 import {uid,now,nonnegative,positive,textRequired,stockChange,verifyOrder,csv,createOrder,prepareOrder,cancelOrder,startChecklist,toggleChecklistItem,completeChecklist,assignTraining,completeTraining} from './domain.js';
-import {appView,icon} from './views.js';
+import {appView,gateView,icon} from './views.js';
 import type {Page,UIState} from './views.js';
-import {load,save,blank,sample,exportData,storageIssue} from './store.js';
+import {init,save,blank,sample,exportData,storageIssue,onSyncChange,onRemoteChange,refresh,syncInfo,setAccessKey,LockedError} from './store.js';
+import {emptyDatabase} from './seed.js';
 
-let db:Database=load();
+let locked=false;
+let lockMessage='';
+let db:Database;
+try{
+ db=await init();
+}catch(error){
+ if(!(error instanceof LockedError))throw error;
+ locked=true;db=emptyDatabase();
+}
 let ui:UIState={page:'overview',search:'',filter:'all',modal:'',modalId:'',mobileOpen:false,actorId:db.employees.find(e=>e.active)?.id||''};
 const app=document.getElementById('app');
 if(!app)throw Error('App mount point is missing');
@@ -50,15 +59,31 @@ function focusMain(){
 }
 function render(resetScroll=false){
  const y=window.scrollY;
- app!.innerHTML=appView(db,ui);
+ if(locked){
+  app!.innerHTML=gateView(lockMessage,{kind:syncInfo().kind,detail:syncInfo().detail});
+  document.title='Unlock · Branchwork';
+  document.body.classList.remove('modal-active','drawer-active');
+  requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('#gate-form input[name="key"]')?.focus({preventScroll:true}));
+  return;
+ }
+ app!.innerHTML=appView(db,ui,{kind:syncInfo().kind,detail:syncInfo().detail});
  document.body.classList.toggle('modal-active',!!ui.modal);
  document.body.classList.toggle('drawer-active',ui.mobileOpen&&drawerQuery.matches);
  document.title=`${pageNames[ui.page]} · Branchwork`;
  applyDrawerState();
+ applySyncStatus();
  if(resetScroll)window.scrollTo({top:0,behavior:'instant'});
  else window.scrollTo({top:y,behavior:'instant'});
  if(storageIssue&&storageIssue!==lastStorageNotice){lastStorageNotice=storageIssue;notify(storageIssue,true);}
  if(!storageIssue)lastStorageNotice='';
+}
+/** Sync feedback is patched in place so a routine save never re-renders a form. */
+function applySyncStatus(){
+ const state=syncInfo();
+ document.querySelectorAll<HTMLElement>('[data-sync]').forEach(el=>{el.dataset.sync=state.kind;});
+ const label=state.kind==='live'?'Live branch workspace':state.kind==='saving'?'Saving…':state.kind==='error'?'Not saved':state.kind==='offline'?'Offline':'Offline workspace';
+ document.querySelectorAll<HTMLElement>('[data-sync-label]').forEach(el=>{el.textContent=label;});
+ document.querySelectorAll<HTMLElement>('[data-sync-detail]').forEach(el=>{el.textContent=state.detail;});
 }
 function commit(next:Database,message:string,focusSelector=''){
  const key=modalReturnFocus||captureFocus();
@@ -246,7 +271,7 @@ function syncChecklistCard(runId:string){
  }
  const bar=card.querySelector<HTMLElement>('.progress');
  if(bar){bar.setAttribute('aria-valuenow',String(done));bar.setAttribute('aria-valuetext',`${done} of ${total} steps complete`);}
- const fill=bar?.querySelector<HTMLElement>('span');if(fill)fill.style.width=`${total?Math.round(done/total*100):0}%`;
+ const fill=bar?.querySelector<HTMLElement>('span');if(fill)fill.style.setProperty('--fill',(total?done/total:0).toFixed(3));
  const help=card.querySelector<HTMLElement>('.run-help');if(help)help.textContent=remaining?`${remaining} ${remaining===1?'step':'steps'} remaining`:'All steps complete';
  const signoff=card.querySelector<HTMLButtonElement>('[data-action="complete-checklist"]');
  if(signoff)signoff.disabled=remaining>0;
@@ -340,7 +365,13 @@ function clickHandler(event:MouseEvent){
  }catch(err){notify(err instanceof Error?err.message:'This action did not complete.',true);}
 }
 app.addEventListener('click',clickHandler);
-app.addEventListener('submit',event=>{const form=(event.target as HTMLElement).closest<HTMLFormElement>('form[data-form]');if(form){event.preventDefault();handleSubmit(form);}});
+app.addEventListener('submit',async event=>{
+ const form=(event.target as HTMLElement).closest<HTMLFormElement>('form[data-form]');
+ if(!form)return;
+ event.preventDefault();
+ if(form.dataset.form==='unlock'){await unlock(form);return;}
+ handleSubmit(form);
+});
 app.addEventListener('input',event=>{
  const target=event.target as HTMLInputElement;
  if(target.id==='page-search'){
@@ -396,6 +427,41 @@ document.addEventListener('keydown',event=>{
   if(search instanceof HTMLInputElement&&search.id==='page-search'&&search.value){ui.search='';render();requestAnimationFrame(()=>document.getElementById('page-search')?.focus());}
  }
 });
+/** Unlock retries the same initial load, so a wrong key cannot leave a half-loaded app. */
+async function unlock(form:HTMLFormElement){
+ const input=form.querySelector<HTMLInputElement>('input[name="key"]');
+ const value=input?.value.trim()||'';
+ if(!value){lockMessage='Enter the branch access key.';render();return;}
+ setAccessKey(value);
+ try{
+  db=await init();
+  locked=false;lockMessage='';
+  ui.actorId=db.employees.find(e=>e.active)?.id||'';
+  render(true);notify('Branch workspace unlocked');
+ }catch(error){
+  lockMessage=error instanceof Error?error.message:'The workspace could not be loaded.';
+  setAccessKey('');
+  render();
+ }
+}
+onSyncChange(applySyncStatus);
+onRemoteChange(remote=>{
+ const wasLocked=locked;
+ db=remote;
+ if(wasLocked){locked=false;ui.actorId=db.employees.find(e=>e.active)?.id||'';}
+ if(!ui.modal)render();
+ notify('Workspace updated from another device');
+});
+const pollTimer=window.setInterval(()=>{if(document.visibilityState==='visible'&&!ui.modal&&!locked)void pullLatest();},20000);
+window.addEventListener('beforeunload',()=>window.clearInterval(pollTimer));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!locked)void pullLatest();});
+async function pullLatest(){
+ const remote=await refresh();
+ if(!remote||ui.modal)return;
+ db=remote;
+ if(!db.employees.some(e=>e.id===ui.actorId&&e.active))ui.actorId=db.employees.find(e=>e.active)?.id||'';
+ render();notify('Workspace updated from another device');
+}
 drawerQuery.addEventListener('change',()=>{
  if(!drawerQuery.matches)ui.mobileOpen=false;
  applyDrawerState();
@@ -403,4 +469,4 @@ drawerQuery.addEventListener('change',()=>{
 render();
 syncAllChecklists();
 // External, non-mutating diagnostics for automated checks.
-Object.defineProperty(window,'__branchworkDiagnostics',{value:()=>({mode:db.mode,ingredients:db.ingredients.length,orders:db.orders.length,checklists:db.checklists.length,trainings:db.trainings.length,activeOperator:ui.actorId,storedMovements:db.movements.length,page:ui.page}),configurable:false});
+Object.defineProperty(window,'__branchworkDiagnostics',{value:()=>({mode:db.mode,sync:syncInfo().kind,revision:syncInfo().revision,locked,employees:db.employees.length,ingredients:db.ingredients.length,orders:db.orders.length,checklists:db.checklists.length,trainings:db.trainings.length,activeOperator:ui.actorId,storedMovements:db.movements.length,page:ui.page}),configurable:false});

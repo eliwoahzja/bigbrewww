@@ -2,6 +2,8 @@
 
 Run date: 2026-10-27. Environment: Linux container, Node 24, Chromium 1248 (Playwright 1.49 headless shell), local HTTP server on `127.0.0.1`.
 
+> **Current state:** the tables below describe the refinement pass, which ran 27/27 browser checks in this repository. Two later passes — the live database layer and the AJONAI anti-slop pass — added 10 API tests and reworked parts of the stylesheet. Their results, and a Chromium fault in this VM that now blocks the browser suite, are recorded in the **Addendum** at the end of this file. Where the two disagree, the addendum is the later record.
+
 Every result below comes from a command in this repository. Nothing is inferred from reading code.
 
 ## Commands and results
@@ -115,3 +117,71 @@ The suite starts the real server, drives the served app in Chromium, and fails t
 5. Run the opening checklist to sign-off, assign and complete training, then reload and confirm everything persisted.
 6. Enter payback assumptions, export all three files, and open the CSVs in a spreadsheet.
 7. Repeat steps 2–4 at 390 px wide, including the drawer and dialogs.
+
+---
+
+# Addendum — live workspace and anti-slop pass (same date)
+
+These two passes changed the storage layer and parts of the stylesheet. Results below are from
+commands executed after those changes; the browser results from the refinement pass above are
+not re-claimed for them.
+
+## Commands and results after both passes
+
+| # | Command | Result |
+| --- | --- | --- |
+| 1 | `npm run build` | **PASSED** — strict `tsc`, 6 modules, `public/` deleted and regenerated with `assets/` |
+| 2 | `npm test` | **PASSED** — 24/24: 14 domain tests + 10 live-workspace API tests |
+| 3 | `node "skills/Anti-Slop (AJONAI)/scripts/check.mjs" src/ index.html` | **PASSED** — 0 error, 0 warn, 0 advisory (was 0/2/10) |
+| 4 | `npm run qa` | **BLOCKED** — Chromium in this VM crashes; reproduction below |
+| 5 | `npm run qa:live` | **BLOCKED** — same browser dependency |
+| 6 | Served-app HTTP smoke (`npm start`, then `curl`) | **PASSED** — `/`, `/dist/main.js`, `/src/styles.css`, `/assets/bigbrew-mark.png`, `/api/config` all return 200 with correct types |
+
+## New tests added by the live-workspace pass
+
+`tests/live-api.test.mjs` drives the real `/api/state` handler — routing, authentication,
+validation, and concurrency — against an injected repository:
+
+1. `GET /api/state` creates the workspace on first read and returns revision 1.
+2. A `PUT` without the branch access key is refused with 401 and changes nothing.
+3. A `PUT` with a malformed workspace payload is refused with 422 before storage.
+4. A `PUT` missing a positive revision is refused with 400.
+5. A write at the current revision is accepted and bumps the revision.
+6. A stale write is refused with 409 and returns the current workspace instead of overwriting it.
+7. Unsupported methods are reported (405) rather than silently ignored.
+8. The file repository keeps the same revision contract as the database one.
+9. `/api/config` advertises live storage only when both a store and an access key are present.
+10. The workspace guard accepts the live mode and rejects schema drift.
+
+## Anti-slop corrections verified by build, tests, and the checker
+
+| Correction | Verified by |
+| --- | --- |
+| Checklist progress fill animates `transform: scaleX()` instead of `width` | Checker warnings gone; `aria-valuenow` / `aria-valuetext` unchanged; domain tests unaffected |
+| Reduced motion is a 140 ms opacity/colour equivalent instead of a 0.01 ms kill switch | New browser assertion written (≤ 160 ms, no positional property transitioned) — **not executed here**, see blocker |
+| Disabled controls use readable tokens instead of `opacity: 0.55` | New browser assertion written (opacity ≥ 0.9, `cursor: not-allowed`) — **not executed here** |
+| `caret-color` and themed scrollbar added | New browser assertions written — **not executed here** |
+| `:active` press receipt on nav, dock, icon, search-clear, remove-line and tick rows | New browser assertion written (pointer-down changes computed background) — **not executed here** |
+| `text-wrap: balance` on headings | Source-verified only |
+| Open Graph metadata added | Served and read back over HTTP |
+| Six deliberate-ignore suppressions, each with its reason on the line | Checker output clean |
+
+## Browser blocker in this VM
+
+After a runner restart, Chromium began crashing with a `SIGTRAP` inside the renderer
+(`dmesg`: `traps: ThreadPoolForeg… trap int3`), which Playwright reports as
+`Target page, context or browser has been closed`.
+
+Bisected to the insertion of the application markup: the page survives with `/dist/main.js`
+blocked, each ES module imports on its own, busy JavaScript, fonts, `localStorage`, `fetch`,
+`Intl` `en-PH` and a large `innerHTML` all survive — but `app.innerHTML = appView(…)` crashes it,
+and so does the same page served with the previous pass's stylesheet. Both the Playwright headless
+shell and a freshly downloaded full Chromium build (missing shared libraries restored into
+`/tmp/chromium-libs`) crash identically. That points at a VM renderer fault, not at this
+repository. `docs/ANTI-SLOP.md` §7 records the full bisect table.
+
+**Consequence:** every browser claim in this file except the addendum belongs to the refinement
+pass, which ran before the restart. The anti-slop pass is verified by build, 24 node tests, the
+static checker and an HTTP smoke test; its visual and interactive assertions are written into
+`scripts/ui-qa.mjs` and remain **unexecuted** until they run on a healthy machine with
+`npm run qa`.

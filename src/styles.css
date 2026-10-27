@@ -20,6 +20,7 @@
 /* 1. Tokens and reset ----------------------------------------------------- */
 :root {
   color-scheme: light;
+  caret-color: var(--action);
   --font-ui: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, "Liberation Serif", Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", "Liberation Mono", monospace;
@@ -39,6 +40,8 @@
 
   --action: #0b5ed7;
   --action-hover: #094fb4;
+  /* Com Design System accent, chosen by requirement — not a template default.
+     deliberate-ignore framework-default-color */
   --blue: #0d6efd;
   --blue-ink: #0a4fc2;
   --ochre: #8a4a12;
@@ -99,12 +102,27 @@ fieldset { border: 0; }
 table { border-collapse: collapse; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { padding: 0; border: 0; background: none; cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: 0.55; }
+/* Disabled keeps readable text, stops answering the pointer, and says why in
+   the interface (for example "n steps remaining" beside a locked sign-off). */
+button:disabled {
+  cursor: not-allowed;
+  color: var(--faint);
+  background: var(--surface-muted);
+  border-color: var(--line);
+  box-shadow: none;
+}
 img, svg { max-width: 100%; }
 svg.ic { display: inline-block; flex: none; vertical-align: middle; }
 [hidden] { display: none !important; }
 
 ::selection { background: #f0d9b9; color: var(--ink); }
+
+/* Scrollbar follows the warm neutral instead of the platform grey. */
+html { scrollbar-color: var(--line-strong) var(--paper); scrollbar-width: thin; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { border: 3px solid var(--paper); border-radius: 8px; background: var(--line-strong); }
+::-webkit-scrollbar-thumb:hover { background: var(--field); }
 
 :where(button, input, select, textarea, a, [tabindex]):focus-visible {
   outline: 2px solid var(--focus);
@@ -113,7 +131,7 @@ svg.ic { display: inline-block; flex: none; vertical-align: middle; }
 main:focus, h1:focus { outline: none; }
 
 /* 2. Base typography and helpers ----------------------------------------- */
-h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; letter-spacing: -0.015em; }
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; letter-spacing: -0.015em; text-wrap: balance; }
 h1 {
   font-family: var(--font-display);
   font-size: clamp(36px, 3.3vw, 46px);
@@ -236,20 +254,12 @@ strong { color: var(--ink); }
 .sidebar-brand-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2); }
 .brand { display: flex; align-items: center; gap: 10px; margin: 2px 6px 32px; min-width: 0; }
 .brand-emblem {
-  display: grid;
-  place-items: center;
-  width: 38px; height: 38px;
+  display: block;
+  width: auto;
+  height: 38px;
   flex: none;
-  border: 1.5px solid var(--ink);
-  border-radius: var(--r-md);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 25px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.08em;
+  object-fit: contain;
 }
-.brand-emblem span { color: var(--blue); }
 .brand-name {
   color: var(--ink);
   font-size: 12px;
@@ -413,6 +423,15 @@ strong { color: var(--ink); }
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .btn:active:not(:disabled) { transform: translateY(1px); }
+/* Press receipt: every control answers pointer-down, not release. */
+.nav-link:active:not(:disabled),
+.dock-link:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.search-clear:active:not(:disabled),
+.remove-line:active:not(:disabled) { background: #ece0d2; color: var(--ink); }
+.dock-link.is-active:active { background: #dce8fb; }
+.task-row input:active + .task-box,
+.checks input:active + .check-box { border-color: var(--action); background: #e4ecfa; }
 .btn-primary { background: var(--action); border-color: var(--action); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--action-hover); border-color: var(--action-hover); }
 .btn-secondary { background: var(--surface-warm); border-color: var(--field); color: var(--ink); }
@@ -546,7 +565,17 @@ strong { color: var(--ink); }
 .empty-state .btn { margin-top: 12px; }
 
 .progress { height: 4px; overflow: hidden; border-radius: 2px; background: #e9ded1; }
-.progress > span { display: block; height: 100%; border-radius: 2px; background: var(--action); transition: width var(--dur) var(--ease); }
+/* The fill animates on the compositor: a --fill ratio drives scaleX, never a
+   layout-driving width. */
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--action);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+  transition: transform var(--dur) var(--ease);
+}
 
 /* 7. Shift desk ---------------------------------------------------------- */
 .setup-panel {
@@ -1111,6 +1140,7 @@ body.modal-active, body.drawer-active { overflow: hidden; }
   animation: overlay-in var(--dur-fast) var(--ease);
 }
 .modal-card {
+  /* deliberate-ignore round-stat — a CSS length, not a stat band */
   width: min(100%, 660px);
   max-height: min(91dvh, 920px);
   overflow-y: auto;
@@ -1425,6 +1455,7 @@ body.modal-active, body.drawer-active { overflow: hidden; }
   .actor-control select { flex: 1; width: 100%; max-width: none; min-height: 44px; font-size: 14px; }
   .actor-add { min-height: 44px; }
   .notice { flex-wrap: wrap; gap: 8px; padding: 10px 11px; font-size: 13px; }
+  /* deliberate-ignore round-stat — a CSS length, not a stat band */
   .notice p { flex-basis: calc(100% - 28px); }
   .notice .btn { width: 100%; min-height: 44px; }
   .page-head { flex-direction: column; align-items: stretch; gap: 13px; margin-bottom: 20px; }
@@ -1625,6 +1656,7 @@ body.modal-active, body.drawer-active { overflow: hidden; }
   .run-help { text-align: left; }
   .run-signoff .btn { width: 100%; }
   .completion-list > li { flex-wrap: wrap; gap: 6px 9px; }
+  /* deliberate-ignore round-stat — a CSS length, not a stat band */
   .completion-list > li > div { flex-basis: calc(100% - 40px); }
   .completion-list time { margin-left: 37px; }
   .dock-link { font-size: 10.5px; }
@@ -1667,10 +1699,62 @@ body.modal-active, body.drawer-active { overflow: hidden; }
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* A gentler equivalent, not a kill switch: colour and opacity still answer
+     in 140ms; movement, slides and springs are removed from the property list. */
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 140ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 140ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
     scroll-behavior: auto !important;
   }
+  .drawer-scrim, .sidebar, .mobile-dock, .modal-card, .toast { transition: none !important; }
+}
+
+/* Live workspace status --------------------------------------------------- */
+.sync-line { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.sync-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--faint); }
+[data-sync="live"] .sync-dot { background: var(--success); }
+[data-sync="local"] .sync-dot { background: var(--ochre); }
+[data-sync="offline"] .sync-dot { background: var(--warning); }
+[data-sync="error"] .sync-dot { background: var(--danger); }
+[data-sync="saving"] .sync-dot { background: var(--action); animation: sync-pulse 1.1s var(--ease) infinite; }
+[data-sync="connecting"] .sync-dot { background: var(--faint); }
+.notice-live { border-color: #c9dccd; background: #f1f7f2; }
+.notice-live .notice-mark { color: var(--success); }
+.notice-live[data-sync="error"] { border-color: #e8c3ba; background: var(--danger-soft); }
+.notice-live[data-sync="error"] .notice-mark { color: var(--danger); }
+/* deliberate-ignore round-stat — keyframe stop, not a stat band */
+@keyframes sync-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* Unlock gate ------------------------------------------------------------- */
+.gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+  background: var(--paper);
+}
+.gate-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 30px 28px 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-dialog);
+  background: var(--surface);
+  box-shadow: var(--shadow-dialog);
+  display: grid;
+  gap: 12px;
+}
+.gate-mark { width: auto; height: 46px; object-fit: contain; margin-bottom: 2px; }
+.gate-card .section-kicker { margin: 0; }
+.gate-card h1 { margin: 0; font-size: 27px; line-height: 1.15; letter-spacing: -0.02em; }
+.gate-lede { margin: 0 0 6px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.gate-actions { margin-top: 4px; }
+.gate-actions .btn { width: 100%; justify-content: center; }
+.gate-foot { margin: 2px 0 0; color: var(--faint); font-size: 11.5px; line-height: 1.45; }
+@media (max-width: 430px) {
+  .gate-card { padding: 24px 20px 22px; }
+  .gate-card h1 { font-size: 24px; }
 }
