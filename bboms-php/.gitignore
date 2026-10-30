@@ -1,5 +1,0 @@
-config.local.php
-.env
-.DS_Store
-*.log
-*.sql.gz

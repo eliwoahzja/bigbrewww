@@ -1,0 +1,3 @@
+<FilesMatch "^(database\.sql|config\.example\.php|config\.local\.php|README\.md|\.env.*|\.gitignore)$">
+Require all denied
+</FilesMatch>

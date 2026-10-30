@@ -1,0 +1,57 @@
+BBOMS - BIGBREW OPERATIONAL MANAGEMENT SYSTEM
+FULLY UPDATED XAMPP TEST BUILD
+
+THIS LOCAL INSTALLATION NOW USES MYSQL 8 ON PORT 3307.
+Read MYSQL8_MIGRATION.md before following the generic fresh-install steps below.
+After reboot, start Apache and run scripts\start_mysql8.ps1 from PowerShell.
+Preserve config.local.php: it contains the dedicated database account credentials.
+
+1. Back up your existing C:\xampp\htdocs\bigbrew folder if present.
+2. Extract the included bigbrew folder to C:\xampp\htdocs\
+3. Start Apache + MySQL inside XAMPP Control Panel.
+4. Open http://localhost/phpmyadmin/
+5. Create a database named bboms (utf8mb4_unicode_ci).
+6. Open the database -> Import -> Choose C:\xampp\htdocs\bigbrew\database.sql -> Go.
+   The import creates the four required BBOMS tables AND the two demo users.
+7. Open http://localhost/bigbrew/
+
+DEMO MANAGER: username manager / password Bigbrew12345
+DEMO STAFF:   username staff   / password Bigbrew12345
+
+If your MySQL root user has a password, edit bigbrew/config.local.php to match.
+The config.local.php file is configured for standard XAMPP defaults only.
+
+If you imported an earlier database.sql, you can import demo_users.sql
+instead to add the accounts without changing your existing tables.
+Existing accounts with the same usernames are NOT modified or reset.
+
+The BigBrew-style cup-and-moustache mark is bundled locally at
+public/assets/bigbrew-icon.svg and bigbrew-icon.png, including a favicon.
+
+LOCAL TEST ACCOUNTS ONLY. Remove the demo users and replace the database
+credentials before deploying anywhere public. This is an independent school
+prototype, not an official BigBrew system.
+
+NAVIGATION UPDATE
+Dashboard / Inventory / Shift log / Sales / Users now use a quick same-origin PHP navigation enhancement.
+A gently shimmering skeleton stays visible for at least 1.5 seconds on each tab switch, or longer if the requested PHP page is still loading.
+Skeleton shimmer cycles over 4 seconds; tab content fades in over 1 second without sliding or smooth scrolling.
+With Windows/browser reduced motion enabled, the fade and shimmer are disabled.
+Forms, login, and logout still submit normally; native navigation remains as fallback.
+
+UI SHIFT FIX / VERIFY INSTALLED VERSION
+----------------------------------------
+1. Exit the browser and make a backup of C:\xampp\htdocs\bigbrew.
+2. Extract this updated ZIP into C:\xampp\htdocs\, replacing the ENTIRE
+   old bigbrew folder. Make sure you did not create bigbrew\bigbrew.
+3. Preserve your existing config.local.php if you changed database credentials.
+   Your MySQL database and records are not modified by this update.
+4. Open http://localhost/bigbrew/ and log in.
+5. Check the bottom of the page for "UI v1.2". If it is missing, Apache is
+   serving an older copy or the ZIP was extracted to the wrong folder.
+6. CSS and JS URLs now have ?v= timestamps so updates avoid old browser cache.
+
+The Users tab uses the same centered content width as other tabs. Scrollbar
+space is reserved consistently, preventing horizontal jumps on Windows.
+Skeletons remain visible for at least 1.5 seconds even with instant local responses.
+Switching tabs again cancels the previous pending navigation and its wait.
