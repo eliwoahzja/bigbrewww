@@ -33,7 +33,7 @@ function db(): PDO {
     $host = (string) ($config['db_host'] ?? '127.0.0.1');
     $port = (string) ($config['db_port'] ?? '3306');
     $name = (string) ($config['db_name'] ?? 'bboms');
-    if (!preg_match('/^\\d+$/D', $port) || (int) $port < 1 || (int) $port > 65535) {
+    if (!preg_match('/^[0-9]+$/D', $port) || (int) $port < 1 || (int) $port > 65535) {
         throw new RuntimeException('Invalid database port.');
     }
     $pdo = new PDO(
