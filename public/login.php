@@ -1,7 +1,7 @@
 <?php
 require dirname(__DIR__).'/app/bootstrap.php';
 try { if (current_user()) redirect('/dashboard.php'); }
-catch (Throwable $e) { }
+catch (Throwable $e) { error_log('[BBOMS session check] ' . (string)$e); }
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -10,9 +10,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if (login_attempt($username, $password)) redirect('/dashboard.php');
         $error = 'Invalid credentials or temporarily locked. Please try again later.';
+    } catch (PDOException|RuntimeException $e) {
+        error_log('[BBOMS database login error] ' . (string)$e);
+        $local = in_array((string)($_SERVER['REMOTE_ADDR'] ?? ''), ['127.0.0.1', '::1'], true);
+        $error = $local
+            ? 'Database connection failed. Check XAMPP MySQL and the bboms database. If needed, change the local database settings.'
+            : 'Database unavailable. Contact your system administrator.';
     } catch (Throwable $e) {
-        error_log((string)$e);
-        $error = 'Database unavailable. Check the deployment configuration.';
+        error_log('[BBOMS unexpected login error] ' . (string)$e);
+        $error = 'Sign-in failed unexpectedly. Check the PHP error log.';
     }
 }
 render_header('Log in', null);
