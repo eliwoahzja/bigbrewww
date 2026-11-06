@@ -1,3 +1,4 @@
-<FilesMatch "^(database\.sql|config\.example\.php|config\.local\.php|README\.md|\.env.*|\.gitignore)$">
-Require all denied
+Options -Indexes
+<FilesMatch "^(config\..*\.php|database\.sql|demo_users\.sql|README\.md|.*\.md|.*\.txt|\.env.*|\.gitignore)$">
+    Require all denied
 </FilesMatch>
