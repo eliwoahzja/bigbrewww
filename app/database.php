@@ -7,8 +7,6 @@ function db(): PDO {
 
     $root = dirname(__DIR__);
     $privatePath = $root . '/config.local.php';
-    // XAMPP defaults are used only from the same machine (or from PHP CLI).
-    // Never apply the passwordless local MySQL defaults to a public deployment.
     $localAddresses = ['127.0.0.1', '::1'];
     $serverAddress = (string) ($_SERVER['SERVER_ADDR'] ?? '');
     $remoteAddress = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
