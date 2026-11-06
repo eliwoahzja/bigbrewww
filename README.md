@@ -11,7 +11,7 @@ A standalone PHP 8.x, MySQL/MariaDB, HTML, CSS and JavaScript application for a 
 5. Select **bboms**, choose **Import**, and import the repository's `database.sql`. This creates `users`, `inventory`, `shift_logs`, and `sales` and adds two local demo accounts. **Skip importing if your existing bboms database already has tables and records.**
 6. Open `http://localhost/bigbrew/`.
 
-The committed `config.xampp.php` sets local connection defaults:
+The committed `config.local.php` sets local connection defaults:
 
 | Setting | Local default |
 | --- | --- |
@@ -21,11 +21,11 @@ The committed `config.xampp.php` sets local connection defaults:
 | Username | `root` |
 | Password | Empty |
 
-You do **not** need to create a separate config file if these settings match your XAMPP MySQL instance. The application reads `config.xampp.php` only on localhost when no private `config.local.php` exists.
+The application reads `config.local.php` for localhost. The committed file contains no secret password. If you need custom credentials, copy `config.example.php` to `config.private.php`, update the values there, and leave `config.private.php` untracked.
 
-**Existing installations:** If `config.local.php` already exists, it always takes priority. If you previously used a separate MySQL instance on port `3307`, keep or update that private configuration based on the database where your actual records reside. This project does not migrate or synchronize databases automatically.
+**Existing installations:** Back up any existing `config.local.php` before replacing project files, especially if you used a separate MySQL instance on port `3307`. Restore those credentials into a local `config.private.php` as needed. A private configuration takes priority over the committed defaults. Databases are not migrated or synchronized automatically.
 
-For custom database credentials, copy `config.example.php` to `config.local.php`, update the values and keep `config.local.php` private. Never commit real database passwords to GitHub.
+Only localhost defaults belong in the committed `config.local.php`. Never commit real database passwords. Keep custom credentials in ignored `config.private.php`.
 
 ### Demo sign-in
 
@@ -44,7 +44,7 @@ These accounts are for local testing only. Change the demo credentials before al
 2. Download the repository ZIP from GitHub and extract it to your configured KSWEB web root, typically `/sdcard/htdocs/bigbrew/`. The folder must contain `index.php`, `app/` and `public/`.
 3. In a local phpMyAdmin instance connected to KSWEB's database, create `bboms` and import `database.sql`. Do not re-import over an existing database with real records.
 4. Visit `http://localhost:8080/bigbrew/` using KSWEB's default Lighttpd port (adjust if you changed the port).
-5. KSWEB commonly uses MySQL host `127.0.0.1`, port `3306`, user `root` and an empty password, matching `config.xampp.php`. If your settings differ, create a private `config.local.php`.
+5. If KSWEB uses MySQL host `127.0.0.1`, port `3306`, user `root` and an empty password, the committed `config.local.php` works directly. Otherwise, create an ignored `config.private.php` with your database credentials.
 
 The web server's configured web root must be the extracted project's parent folder for this URL to work. KSWEB's Lighttpd does not read Apache `.htaccess` files. Keep the local test server restricted to your own device.
 
@@ -68,8 +68,8 @@ The web server's configured web root must be the extracted project's parent fold
 - `app/` contains PHP authentication, database and application logic.
 - `public/` contains the web pages and required images, CSS and JavaScript.
 - `database.sql` is the schema and starter account import for phpMyAdmin.
-- `config.xampp.php` contains safe defaults for local XAMPP.
-- `config.example.php` is a template for custom private connections.
+- `config.local.php` contains safe local defaults for XAMPP and Android KSWEB.
+- `config.example.php` is a template for a private `config.private.php` override.
 - `scripts/create_manager.php` creates the initial manager on a fresh database without demo accounts, using a command-line prompt.
 
 Private application files and configuration should not be exposed as web pages. For public deployment, use a PHP/MySQL-compatible host, configure an Apache document root of `public/`, use private database credentials and replace the local demo accounts.

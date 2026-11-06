@@ -1,4 +1,4 @@
-config.local.php
+config.private.php
 .env
 .DS_Store
 *.log

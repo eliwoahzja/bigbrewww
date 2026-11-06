@@ -6,24 +6,25 @@ function db(): PDO {
     if ($pdo instanceof PDO) return $pdo;
 
     $root = dirname(__DIR__);
-    $privatePath = $root . '/config.local.php';
-    $localAddresses = ['127.0.0.1', '::1'];
-    $serverAddress = (string) ($_SERVER['SERVER_ADDR'] ?? '');
-    $remoteAddress = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $privatePath = $root . '/config.private.php';
+    $defaultPath = $root . '/config.local.php';
+    $requestHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    $requestAddress = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $localhostName = preg_match('/^(localhost|127[.]0[.]0[.]1)(:[0-9]+)?$/iD', $requestHost) === 1
+        || preg_match('/^\[::1\](:[0-9]+)?$/D', $requestHost) === 1;
     $isLocal = PHP_SAPI === 'cli'
-        || in_array($serverAddress, $localAddresses, true)
-        || ($serverAddress === '' && in_array($remoteAddress, $localAddresses, true));
+        || ($localhostName && in_array($requestAddress, ['127.0.0.1', '::1'], true));
 
     if (is_file($privatePath)) {
         $path = $privatePath;
     } elseif ($isLocal) {
-        $path = $root . '/config.xampp.php';
+        $path = $defaultPath;
     } else {
-        throw new RuntimeException('Database configuration missing. Set up config.local.php on this server.');
+        throw new RuntimeException('Production database configuration is missing. Set up config.private.php.');
     }
 
     if (!is_file($path)) {
-        throw new RuntimeException('Database configuration missing. Configure config.local.php or the local XAMPP defaults.');
+        throw new RuntimeException('Database configuration is missing. Set up config.local.php.');
     }
     $config = require $path;
     if (!is_array($config)) throw new RuntimeException('Database configuration is invalid.');
