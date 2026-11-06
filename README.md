@@ -11,6 +11,16 @@
 
 **This is a new PHP/MySQL implementation.** The earlier Vercel/Supabase project is architecturally different. This application **cannot be deployed to Vercel's standard static/Node setup or wired directly to Supabase PostgreSQL** without changing the report's stack.
 
+## XAMPP localhost setup (manual phpMyAdmin import)
+
+1. Put this repository in `C:\xampp\htdocs\bigbrew\` and start **Apache** and **MySQL** in XAMPP.
+2. Visit `http://localhost/phpmyadmin/`, create a database named `bboms` with `utf8mb4_unicode_ci` collation, then select **Import** and import `database.sql`. If the database already contains your records, do not import again.
+3. Visit `http://localhost/bigbrew/` to sign in. For standard XAMPP defaults, **you do not need to copy or create a PHP config file**: the committed `config.xampp.php` supplies host `127.0.0.1`, port `3306`, user `root`, and an empty password when Apache is serving localhost.
+4. If MySQL uses a different account, password, or port, make a private `config.local.php` from `config.example.php` and enter your actual settings. A pre-existing `config.local.php` always takes priority over `config.xampp.php`. The previously migrated dedicated MySQL 8 database listens on port `3307` and requires its original private credentials.
+5. If login fails, check `C:\xampp\apache\logs\error.log` and confirm that `bboms` contains the `users`, `inventory`, `shift_logs`, and `sales` tables.
+
+The committed `config.xampp.php` contains **no private credentials**. Do not commit `config.local.php` or place a passwordless root MySQL account on the public internet. This is an Apache/PHP/MySQL application, **not** a Vercel Node project.
+
 ## Setup
 
 For this already-migrated local installation, see [MYSQL8_MIGRATION.md](MYSQL8_MIGRATION.md) for the dedicated MySQL 8 instance and its startup command. The generic fresh-install instructions below do not replace that connection configuration.
