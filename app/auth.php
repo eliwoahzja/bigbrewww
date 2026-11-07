@@ -9,7 +9,7 @@ function site_url(string $path): string {
     $base = $base === '/' || $base === '.' ? '' : rtrim($base, '/');
     return $base.'/'.ltrim($path, '/');
 }
-function redirect(string $path): never {
+function redirect(string $path): void {
     header('Location: '.site_url($path), true, 303); exit;
 }
 function csrf_token(): string {
@@ -19,7 +19,7 @@ function csrf_token(): string {
 function csrf_input(): string { return '<input type="hidden" name="csrf" value="'.esc(csrf_token()).'">'; }
 function verify_csrf(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !hash_equals(csrf_token(), (string)($_POST['csrf'] ?? ''))) {
-        http_response_code(403); exit('Your form session expired. Go back, reload, and try again.');
+        http_response_code(403); exit('Your form session expired. Reload the page and submit again.');
     }
 }
 function flash(string $kind, string $msg): void { $_SESSION['flash'] = [$kind, $msg]; }
@@ -42,7 +42,7 @@ function require_login(): array {
     $u = current_user(); if (!$u) redirect('/login.php'); return $u;
 }
 function require_manager(array $u): void {
-    if ($u['role'] !== 'manager') { http_response_code(403); exit('Manager permissions are required.'); }
+    if ($u['role'] !== 'manager') { http_response_code(403); exit('Only managers can do that.'); }
 }
 function login_attempt(string $username, string $password): bool {
     $until = (int)($_SESSION['login_locked_until'] ?? 0);

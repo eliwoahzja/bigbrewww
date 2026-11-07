@@ -9,7 +9,7 @@ $low=query_all('SELECT id,item_name,category,quantity,unit,par_level FROM invent
 $lowCount=query_one('SELECT COUNT(*) count FROM inventory WHERE quantity<=par_level');
 $logs=query_all('SELECT s.shift_date,s.shift_type,s.notes,s.created_at,u.username FROM shift_logs s JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC,s.id DESC LIMIT 5');
 render_header('Dashboard',$user);
-page_heading('Today · '.date('l, F j'),'Shift overview','Sales entered, stock requiring attention, and the latest staff handovers. All figures come from saved branch records.');
+page_heading('Today · '.date('l, F j'),'Shift overview',"Today's sales and stock, plus the latest handovers.");
 ?>
 <div class="dashboard-grid stat-grid">
  <section class="panel stat-card"><h2>Today's sales</h2><strong class="stat-value"><?=money($todaySales['amount'])?></strong><a class="text-link" href="<?=esc(site_url('/sales.php'))?>">Record sale →</a></section>
@@ -20,7 +20,7 @@ page_heading('Today · '.date('l, F j'),'Shift overview','Sales entered, stock r
  <?php if ($low): ?><section class="panel stock-alert"><div class="panel-heading"><h2>Low-stock watch</h2><span class="mini-label">Quantity vs minimum</span></div>
  <ul class="watch-list"><?php foreach ($low as $row): ?><li><div><strong><?=esc($row['item_name'])?></strong><small><?=esc($row['category'])?></small></div><div class="align-right"><strong><?=esc($row['quantity'])?> <?=esc($row['unit'])?></strong><small>Par <?=esc($row['par_level'])?></small></div></li><?php endforeach; ?></ul></section><?php endif; ?>
  <section class="panel"><div class="panel-heading"><h2>Recent shift handovers</h2><a class="text-link" href="<?=esc(site_url('/shiftlog.php'))?>">All logs →</a></div>
- <?php if (!$logs): empty_state('No handovers yet','Record the first opening, mid, or closing shift handover.'); else: ?>
+ <?php if (!$logs): empty_state('No handovers yet','The first one you submit will show up here.'); else: ?>
  <div class="table-wrap" role="region" aria-label="Recent shift logs" tabindex="0"><table class="data-table"><caption class="sr-only">Five most recent shift logs</caption><thead><tr><th scope="col">Date</th><th scope="col">Shift</th><th scope="col">User</th><th scope="col">Notes</th></tr></thead><tbody><?php foreach ($logs as $row): ?><tr><td><?=esc($row['shift_date'])?></td><td><?=esc(ucfirst($row['shift_type']))?></td><td><?=esc($row['username'])?></td><td class="notes-cell"><?=nl2br(esc($row['notes']))?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?></section>
 </div>
 <?php render_footer(); ?>

@@ -1,4 +1,12 @@
 Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [R=404,L]
+    RewriteRule ^(app|scripts|design)(/|$) - [R=404,L]
+</IfModule>
+
 <FilesMatch "^(config\..*\.php|database\.sql|demo_users\.sql|README\.md|.*\.md|.*\.txt|\.env.*|\.gitignore)$">
     Require all denied
 </FilesMatch>

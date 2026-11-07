@@ -1,0 +1,498 @@
+/* BigBrew BBOMS hero. Scoped to the stage; tokens come from the Stage. */
+
+.bb .ss-stage {
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f4efe8;
+}
+
+/* The hero: a browser window at the product's own width, a gutter on the left,
+   running off the right and bottom edges. */
+.bb .bb-window {
+  position: absolute;
+  left: 24px;
+  top: 30px;
+  width: 1120px;
+  height: 620px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.bb .bb-window .ss-window__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #f4efe8;
+}
+
+/* Product header, as the app draws it: white bar, serif wordmark lockup */
+.bb .bb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 56px;
+  padding: 0 28px;
+  background: #fff;
+  border-bottom: 1px solid #e6d9c8;
+}
+
+.bb .bb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The product's real mark, at the app's 46px lockup scaled into this crop */
+.bb .bb-mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  flex: none;
+}
+
+.bb .bb-brand strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  color: #3a2a1c;
+  line-height: 1.1;
+}
+
+.bb .bb-brand small {
+  display: block;
+  margin-top: 2px;
+  font-size: 8.5px;
+  font-weight: 550;
+  letter-spacing: 0.05em;
+  color: #6b6056;
+  line-height: 1.2;
+}
+
+.bb .bb-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bb .bb-who {
+  text-align: right;
+}
+
+.bb .bb-who strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3a2a1c;
+  line-height: 1.2;
+}
+
+.bb .bb-who small {
+  display: block;
+  margin-top: 2px;
+  font-size: 8.5px;
+  color: #6b6056;
+  line-height: 1.2;
+}
+
+.bb .bb-signout {
+  flex: none;
+  font-size: 9px;
+  color: #4d3322;
+}
+
+/* Nav: the app's horizontal strip, the active item marked by weight and a rule */
+.bb .bb-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: none;
+  height: 36px;
+  padding: 0 28px;
+  background: #fff;
+  border-bottom: 1px solid #e6d9c8;
+}
+
+.bb .bb-nav__item {
+  position: relative;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #635447;
+  white-space: nowrap;
+}
+
+.bb .bb-nav__item[data-on] {
+  color: #3a2a1c;
+  font-weight: 650;
+}
+
+.bb .bb-nav__item[data-on]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 2px;
+  background: #8b542e;
+}
+
+.bb .bb-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding: 18px 28px;
+  background: #f4efe8;
+}
+
+.bb .bb-heading {
+  flex: none;
+}
+
+.bb .bb-kicker {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: #8b542e;
+}
+
+.bb .bb-h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #3a2a1c;
+}
+
+/* Three stat cards, the app's grid; the third reads as an alert */
+.bb .bb-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  flex: none;
+}
+
+.bb .bb-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 88px;
+  padding: 13px 16px;
+  border: 1px solid #e6d9c8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 9px 26px rgba(61, 41, 20, 0.045);
+}
+
+.bb .bb-card--alert {
+  border-left: 3px solid #a33d30;
+  background: #fff5f1;
+}
+
+.bb .bb-card__label {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #3a2a1c;
+}
+
+.bb .bb-value {
+  display: block;
+  margin-top: 4px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: #3a2a1c;
+  font-variant-numeric: tabular-nums;
+}
+
+.bb .bb-value--alert {
+  color: #a33d30;
+}
+
+.bb .bb-card__note {
+  margin-top: auto;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #6b6056;
+}
+
+.bb .bb-link {
+  margin-top: auto;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #8b542e;
+  white-space: nowrap;
+}
+
+.bb .bb-link[data-hover] {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bb .bb-link--quiet {
+  margin-left: auto;
+  margin-top: 0;
+  font-weight: 550;
+}
+
+/* Panels: watch list on the left, handovers on the right */
+.bb .bb-panels {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bb .bb-panel {
+  min-height: 0;
+}
+
+.bb .bb-panel {
+  padding: 13px 16px;
+  border: 1px solid #e6d9c8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 9px 26px rgba(61, 41, 20, 0.045);
+}
+
+.bb .bb-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+
+.bb .bb-panel__title {
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #3a2a1c;
+}
+
+.bb .bb-panel__meta {
+  font-size: 8.5px;
+  line-height: 1.4;
+  color: #6b6056;
+  white-space: nowrap;
+}
+
+.bb .bb-watch__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid #efe5d8;
+}
+
+.bb .bb-watch__name,
+.bb .bb-watch__qty {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #3a2a1c;
+}
+
+.bb .bb-watch__cat,
+.bb .bb-watch__par {
+  display: block;
+  margin-top: 1px;
+  font-size: 8.5px;
+  line-height: 1.35;
+  color: #6b6056;
+}
+
+.bb .bb-watch__nums {
+  text-align: right;
+}
+
+.bb .bb-shifts__head,
+.bb .bb-shifts__row {
+  display: grid;
+  /* A trailing flexible track keeps the notes column inside the visible crop */
+  grid-template-columns: 42px 46px minmax(0, 1fr) 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.bb .bb-shifts__head {
+  padding: 5px 0 6px;
+}
+
+.bb .bb-shifts__h {
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: #8d7f70;
+}
+
+.bb .bb-shifts__row {
+  padding: 6px 0;
+  border-top: 1px solid #efe5d8;
+}
+
+.bb .bb-shifts__date,
+.bb .bb-shifts__shift,
+.bb .bb-shifts__user {
+  font-size: 9px;
+  line-height: 1.35;
+  color: #3a2a1c;
+  white-space: nowrap;
+}
+
+.bb .bb-shifts__shift,
+.bb .bb-shifts__user {
+  color: #6b6056;
+}
+
+.bb .bb-shifts__note i {
+  display: block;
+  max-width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: #e9dfd2;
+}
+
+/* The form: a small anchored surface under the link, never a satellite */
+.bb .bb-form {
+  position: absolute;
+  z-index: 2;
+  width: 236px;
+  padding: 12px 14px 14px;
+  border: 1px solid #e6d9c8;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--ss-shadow-float);
+  opacity: 0;
+  transform: translateY(-4px) scale(0.985);
+  transform-origin: 20px 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.bb .bb-form[data-show] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.bb .bb-form__title {
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #3a2a1c;
+}
+
+.bb .bb-form__field {
+  margin-top: 8px;
+}
+
+.bb .bb-form__field .ss-field__label {
+  font-size: 8.5px;
+  color: #6b6056;
+}
+
+.bb .bb-form__field .ss-field__box {
+  height: 30px;
+  font-size: 11px;
+}
+
+.bb .bb-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bb .bb-form__actions .ss-button {
+  font-size: 9.5px;
+}
+
+/* Confirmation: a system toast over the page's lower corner */
+.bb .bb-toast {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 3;
+}
+
+.bb .bb-toast .ss-toast {
+  font-size: 10px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 8px;
+  background: #3a2a1c;
+  color: #fff9ee;
+  box-shadow: var(--ss-shadow-float);
+}
+
+/* Phone column: a tighter crop around the story, not the wide page squeezed */
+/* The phone column shows the app's own mobile width, edge to edge, running off
+   the bottom; every real value stays whole instead of being cut by a wider crop */
+.bb [data-layout='compact'] .bb-window {
+  left: 0;
+  top: 0;
+  width: 358px;
+  height: 620px;
+  border-radius: 0;
+}
+
+.bb [data-layout='compact'] .bb-head {
+  height: 52px;
+  padding: 0 16px;
+}
+
+.bb [data-layout='compact'] .bb-account {
+  gap: 0;
+}
+
+.bb [data-layout='compact'] .bb-who,
+.bb [data-layout='compact'] .bb-nav {
+  display: none;
+}
+
+.bb [data-layout='compact'] .bb-page {
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.bb [data-layout='compact'] .bb-heading {
+  display: none;
+}
+
+.bb [data-layout='compact'] .bb-stats {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bb [data-layout='compact'] .bb-card:not(:first-child) {
+  display: none;
+}
+
+.bb [data-layout='compact'] .bb-card {
+  height: 92px;
+}
+
+.bb [data-layout='compact'] .bb-panels {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bb [data-layout='compact'] .bb-panel--shifts {
+  display: none;
+}

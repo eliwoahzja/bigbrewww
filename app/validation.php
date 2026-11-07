@@ -27,24 +27,25 @@ function sales_notes(string $notes): string {
 }
 function valid_notes(string $s): bool { return strlen($s) >= 1 && strlen($s) <= 2000; }
 function valid_inventory(array $row): ?string {
-    foreach (['item_name'=>100,'category'=>50,'unit'=>20] as $name=>$max) {
+    foreach (['item_name'=>['item name',100],'category'=>['category',50],'unit'=>['unit',20]] as $name=>[$label,$max]) {
         $value = trim((string)($row[$name] ?? ''));
-        if ($value === '' || strlen($value) > $max) return "Enter a valid $name.";
+        if ($value === '') return "Enter the $label.";
+        if (strlen($value) > $max) return "Keep the $label to $max characters or fewer.";
     }
-    foreach (['quantity','par_level','unit_cost'] as $field) {
-        if (!valid_money((string)($row[$field] ?? ''))) return "Enter a valid nonnegative $field (up to 2 decimals).";
+    foreach (['quantity'=>'quantity','par_level'=>'par level','unit_cost'=>'unit cost'] as $field=>$label) {
+        if (!valid_money((string)($row[$field] ?? ''))) return "Enter a $label of 0 or more, with up to two decimals.";
     }
     return null;
 }
 function valid_sale(array $row): ?string {
-    if (!valid_date((string)($row['sale_date'] ?? ''))) return 'Choose a valid date that is not in the future.';
-    if (!valid_money((string)($row['amount'] ?? ''), false)) return 'Enter an amount greater than zero, with up to 2 decimals.';
-    if (!preg_match('/\A.{0,255}\z/us', (string)($row['notes'] ?? ''))) return 'Notes cannot exceed 255 characters.';
+    if (!valid_date((string)($row['sale_date'] ?? ''))) return "Pick a valid date. Future dates aren't allowed.";
+    if (!valid_money((string)($row['amount'] ?? ''), false)) return 'Enter an amount above zero, with up to two decimals.';
+    if (!preg_match('/\A.{0,255}\z/us', (string)($row['notes'] ?? ''))) return 'Keep notes to 255 characters or fewer.';
     return null;
 }
 function valid_shift_entry(array $row): ?string {
-    if (!valid_date((string)($row['shift_date'] ?? ''))) return 'Choose a valid date that is not in the future.';
-    if (!valid_shift((string)($row['shift_type'] ?? ''))) return 'Choose opening, mid, or closing.';
-    if (!valid_notes(trim((string)($row['notes'] ?? '')))) return 'Handover notes must contain 1–2000 characters.';
+    if (!valid_date((string)($row['shift_date'] ?? ''))) return "Pick a valid date. Future dates aren't allowed.";
+    if (!valid_shift((string)($row['shift_type'] ?? ''))) return 'Pick opening, mid, or closing.';
+    if (!valid_notes(trim((string)($row['notes'] ?? '')))) return 'Write between 1 and 2000 characters.';
     return null;
 }

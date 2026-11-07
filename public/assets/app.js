@@ -9,7 +9,7 @@
     ['users.php', 'Users'],
   ]);
   let pending = null;
-  const minimumSkeletonMs = 1500;
+  const minimumSkeletonMs = 450;
 
   function waitForSkeleton(startedAt, signal) {
     const remaining = minimumSkeletonMs - (performance.now() - startedAt);
@@ -64,7 +64,7 @@
       </div>`).join('');
     return `<section class="navigation-skeleton" role="status" aria-live="polite" aria-label="Loading ${name}">
       <div class="skeleton-header">
-        <p class="loading-title">Loading ${name}…</p>
+        <p class="loading-title">Loading ${name}</p>
         <div class="sk-bar sk-head-title" aria-hidden="true"></div>
         <div class="sk-bar sk-head-description" aria-hidden="true"></div>
       </div>
